@@ -1,0 +1,21 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="favicon.ico"><title>京东夺宝岛助手</title><link href="css/app.f4987306.css" rel="preload" as="style"><link href="css/chunk-vendors.236f56de.css" rel="preload" as="style"><link href="js/app.96b7c9f6.js" rel="preload" as="script"><link href="js/chunk-vendors.2a0c0455.js" rel="preload" as="script"><link href="css/chunk-vendors.236f56de.css" rel="stylesheet"><link href="css/app.f4987306.css" rel="stylesheet"></head><body><noscript><strong>We're sorry but JDTreasureGrabber doesn't work properly without JavaScript enabled. Please enable it to continue.</strong></noscript><p id="output"></p><div id="app"></div><script>const { goToBid, updateBid, getBidDetail, searchProduct, goToProductPage } = require("../server/index");
+
+        function startBid (id, price, bidder, markup, lastBidCountdownTime, isFixedPrice) {
+            goToBid(id, price, bidder, markup, lastBidCountdownTime, isFixedPrice);
+        }
+
+        function fetchBidDetail (id) {
+            return getBidDetail(id);
+        }
+
+        function startUpdateBid (id, price, bidder, markup, lastBidCountdownTime, isFixedPrice) {
+            updateBid(id, price, bidder, markup, lastBidCountdownTime, isFixedPrice);
+        }
+
+        function fetchProduct (name, pageNo, status) {
+            return searchProduct(name, pageNo, status);
+        }
+
+        function handleGoToProductPage (productId) {
+            return goToProductPage(productId);
+        }</script><script src="js/chunk-vendors.2a0c0455.js"></script><script src="js/app.96b7c9f6.js"></script></body></html>
