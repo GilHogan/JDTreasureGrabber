@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <link rel="icon" href="<%= BASE_URL %>favicon.ico">
+    <title>京东夺宝岛助手</title>
+</head>
+
+<body>
+    <noscript>
+        <strong>We're sorry but <%= htmlWebpackPlugin.options.title %> doesn't work properly without JavaScript enabled.
+                Please enable it to continue.</strong>
+    </noscript>
+    <p id="output"></p>
+    <div id="app"></div>
+    <!-- built files will be auto injected -->
+    <script>
+        const { goToBid, updateBid, getBidDetail, searchProduct, goToProductPage } = require("../server/index");
+
+        function startBid (id, price, bidder, markup, lastBidCountdownTime, isFixedPrice) {
+            goToBid(id, price, bidder, markup, lastBidCountdownTime, isFixedPrice);
+        }
+
+        function fetchBidDetail (id) {
+            return getBidDetail(id);
+        }
+
+        function startUpdateBid (id, price, bidder, markup, lastBidCountdownTime, isFixedPrice) {
+            updateBid(id, price, bidder, markup, lastBidCountdownTime, isFixedPrice);
+        }
+
+        function fetchProduct (name, pageNo, status) {
+            return searchProduct(name, pageNo, status);
+        }
+
+        function handleGoToProductPage (productId) {
+            return goToProductPage(productId);
+        }
+
+    </script>
+</body>
+
+</html>
