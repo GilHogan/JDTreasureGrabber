@@ -8,6 +8,9 @@ on:
 env:
   PRODUCT_NAME: "JDTreasureGrabber"
 
+permissions:
+  contents: write
+
 jobs:
   release:
     name: Publish release
