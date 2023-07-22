@@ -11,9 +11,9 @@
 		"serve": "vue-cli-service serve",
 		"build": "vue-cli-service build",
 		"lint": "vue-cli-service lint",
-		"dist": "electron-builder --publish never",
+		"dist": "vue-cli-service build && electron-builder --publish never",
 		"start": "electron .",
-		"release": "electron-builder --publish always"
+		"release": "vue-cli-service build && electron-builder --publish always"
 	},
 	"dependencies": {
 		"carlo": "^0.9.46",
