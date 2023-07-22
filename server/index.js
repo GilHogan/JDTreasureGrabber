@@ -1,4 +1,4 @@
-const puppeteer = require('puppeteer');
+const puppeteer = require('puppeteer-core');
 const findChrome = require('../node_modules/carlo/lib/find_chrome.js');
 const querystring = require("querystring");
 const https = require("https");
@@ -139,14 +139,15 @@ async function initBid() {
  */
 async function initBrowser() {
 
-	// let findChromePath = await findChrome({});
-	// let executablePath = findChromePath.executablePath;
 	if (Browser && Browser.isConnected()) {
 		return;
 	}
 
+	let findChromePath = await findChrome({});
+	let executablePath = findChromePath.executablePath;
+
 	Browser = await puppeteer.launch({
-		// executablePath,
+		executablePath,
 		headless: false,
 		defaultViewport: null
 	});

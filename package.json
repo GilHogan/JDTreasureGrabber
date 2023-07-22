@@ -19,7 +19,7 @@
 		"carlo": "^0.9.46",
 		"core-js": "^3.16.3",
 		"dayjs": "^1.11.7",
-		"puppeteer": "^20.7.2",
+		"puppeteer-core": "^20.7.2",
 		"vue": "^2.6.14"
 	},
 	"devDependencies": {
