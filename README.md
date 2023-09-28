@@ -1,5 +1,10 @@
 # 京东夺宝岛助手
 
+在release中可直接下载或自行打包构建
+
+[![release](https://img.shields.io/github/v/release/GilHogan/JDTreasureGrabber?color=blue&label=Release)](https://github.com/GilHogan/JDTreasureGrabber/releases)
+
+
 **注意：** 
 
 - 本软件不保证能抢购成功

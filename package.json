@@ -1,6 +1,6 @@
 {
 	"name": "JDTreasureGrabber",
-	"version": "0.2.14",
+	"version": "0.2.15",
 	"author": "hogan <hogan01.id@gmail.com> (https://github.com/HoganGolden)",
 	"private": true,
 	"main": "main.js",
@@ -56,6 +56,7 @@
 	"build": {
 		"productName": "JDTreasureGrabber",
 		"appId": "com.hogan.JDTreasureGrabber",
+		"icon": "./public/favicon_512x512.png",
 		"win": {
 			"artifactName": "${productName}-${os}-${arch}-${version}.${ext}",
 			"target": [
@@ -63,11 +64,11 @@
 				"nsis",
 				"zip"
 			],
-			"icon": "public/favicon.ico"
+			"icon": "./public/favicon.ico"
 		},
 		"mac": {
 			"artifactName": "${productName}-${os}-${arch}-${version}.${ext}",
-			"icon": "public/favicon.png",
+			"icon": "./public/favicon.png",
 			"target": [
 				"dmg",
 				"zip"
@@ -79,7 +80,7 @@
 				"StartupNotify": "true",
 				"Encoding": "UTF-8"
 			},
-			"icon": "public/favicon.png",
+			"icon": "./public/",
 			"target": [
 				"AppImage",
 				"rpm",
