@@ -44,7 +44,7 @@ const noticeTitle = "京东夺宝岛助手提示";
 /**
  * 启动浏览器，加载页面
  * */
-function goToBid(params) {
+function goToBid (params) {
 	const { id, price, bidder, markup, lastBidCountdownTime, biddingMethod, minPrice } = params;
 	if (Browser && Browser.isConnected()) {
 		if (isLogin) {
@@ -71,7 +71,7 @@ function goToBid(params) {
 /**
  * 更新
  * */
-async function updateBid(params) {
+async function updateBid (params) {
 	const { id, price, bidder, markup, lastBidCountdownTime, biddingMethod, minPrice } = params;
 
 	if (!isLogin) {
@@ -115,7 +115,7 @@ async function updateBid(params) {
 /**
  * 启动浏览器，加载页面
  * */
-async function initBid() {
+async function initBid () {
 
 	await initBrowser();
 
@@ -144,7 +144,7 @@ async function initBid() {
 /**
  * 初始化浏览器
  */
-async function initBrowser() {
+async function initBrowser () {
 
 	if (Browser && Browser.isConnected()) {
 		return;
@@ -172,7 +172,7 @@ async function initBrowser() {
 /**
  * 重置数据
  */
-function resetData() {
+function resetData () {
 	// 初始化参数
 	OfferPricePara = null;
 	NowPrice = null;
@@ -189,7 +189,7 @@ function resetData() {
 /**
  * 跳转到目标商品页面
  */
-async function handleGoToTargetPage() {
+async function handleGoToTargetPage () {
 
 	if (!page) {
 		return;
@@ -262,7 +262,7 @@ async function handleGoToTargetPage() {
 /**
 * 判断是否进入商品页面，因为会进行人机认证，需要确保后续逻辑，再进入商品页面后再执行
 * */
-async function waitItemPageLoadFinish() {
+async function waitItemPageLoadFinish () {
 	let button = null;
 	let count = 0;
 	const sleetSeconds = 1;
@@ -293,7 +293,7 @@ async function waitItemPageLoadFinish() {
 /**
  * 获得竞拍实时信息
  * */
-function getBatchInfo() {
+function getBatchInfo () {
 	return new Promise((resolve, reject) => {
 
 		const path = `${API.api_jd_path}?functionId=paipai.auction.current_bid_info&t=${new Date().getTime()}&appid=paipai_sale_pc&client=pc&loginType=3&body=${encodeURI("{\"auctionId\":" + Item_ID + "}")}`;
@@ -355,7 +355,7 @@ function getBatchInfo() {
 	});
 }
 
-function sleep(milliseconds = 10) {
+function sleep (milliseconds = 10) {
 	return new Promise((resolve, reject) => {
 		setTimeout(function () {
 			resolve();
@@ -363,7 +363,7 @@ function sleep(milliseconds = 10) {
 	});
 }
 
-function refreshBatchInfo() {
+function refreshBatchInfo () {
 	let fetching = false;
 	RefreshBatchInfoTimer = setInterval(async function () {
 		if (fetching) {
@@ -380,7 +380,7 @@ function refreshBatchInfo() {
  * 若剩余时间大于3s，每2s刷新一次，小于3s，就100ms刷新一次
  * 执行购买逻辑
  * */
-function handlePriceAndTime() {
+function handlePriceAndTime () {
 
 	const price = NowPrice || 1;
 	const currentLocalTime = new Date().getTime();
@@ -505,7 +505,7 @@ function handlePriceAndTime() {
 /**
  * 通过操作页面的按钮，来进行出价
  * */
-async function buyByPage(price) {
+async function buyByPage (price) {
 	if (!page) {
 		return;
 	}
@@ -526,7 +526,7 @@ async function buyByPage(price) {
 /**
  * 通过直接调用api接口去出价
  * */
-async function buyByAPI(price) {
+async function buyByAPI (price) {
 	if (OfferPricePara === null) {
 		console.log("没有正确获取到拍卖参数，无法执行购买");
 	} else {
@@ -553,7 +553,7 @@ async function buyByAPI(price) {
 /**
  * 发出出价的请求
  * */
-function requestOfferPrice(para) {
+function requestOfferPrice (para) {
 	return new Promise((resolve, reject) => {
 		const price = para.body.price;
 		para.body = JSON.stringify(para.body);
@@ -609,7 +609,7 @@ function requestOfferPrice(para) {
 /**
  * 处理cookie，将两个页面的cookie合并到一起
  * */
-function mergeCookie(cookie_one, cookie_two) {
+function mergeCookie (cookie_one, cookie_two) {
 	let cookie = {};
 	let string = "";
 	for (let i in cookie_two) {
@@ -630,7 +630,7 @@ function mergeCookie(cookie_one, cookie_two) {
 /**
  * 获得竞拍标的信息
  * */
-function getBidDetail(bidId) {
+function getBidDetail (bidId) {
 	return new Promise((resolve, reject) => {
 
 		const path = `${API.api_jd_path}?functionId=paipai.auction.detail&t=${new Date().getTime()}&appid=paipai_sale_pc&client=pc&loginType=3&body=${encodeURI("{\"auctionId\":" + bidId + "}")}`;
@@ -682,17 +682,21 @@ function getBidDetail(bidId) {
  * 搜索产品
  * status: ""：全部，1：即将开始，2：正在进行
  * */
-function searchProduct(params = {}) {
+function searchProduct (params = {}) {
 	const { name, pageNo = 1, status = "" } = params;
 	return new Promise((resolve, reject) => {
 
 		console.log("searchProduct name = ", name, " , pageNo = ", pageNo, " , status = ", status);
 
-		if (!name) {
-			resolve(null);
+		let path, params;
+		if (name) {
+			path = `${API.api_jd_path}?functionId=pp.dbd.biz.search.query&t=${new Date().getTime()}&appid=paipai_h5`;
+			params = { pageNo: pageNo, pageSize: 20, key: name, status: status, sort: "endTime_asc", specialType: 1, mpSource: 1, sourceTag: 2 };
+		} else {
+			path = `${API.api_jd_path}?functionId=dbd.auction.list.v2&t=${new Date().getTime()}&appid=paipai_h5`;
+			params = { pageNo: pageNo, pageSize: 20, key: name, status: status, auctionFilterTime: 180, isPersonalRecommend: 0, p: 2, skuGroup: 1, mpSource: 1, sourceTag: 2 };
 		}
 
-		const path = `${API.api_jd_path}?functionId=pp.dbd.biz.search.query&t=${new Date().getTime()}&appid=paipai_h5`;
 		const options = {
 			hostname: API.api_jd_hostname,
 			port: 443,
@@ -703,10 +707,9 @@ function searchProduct(params = {}) {
 				"User-Agent": "jdapp;android;12.0.2;;;M/5.0;appBuild/98787;ef/1;ep/%7B%22hdid%22%3A%22JM9F1ywUPwflvMIpYPok0tt5k9kW4ArJEU3lfLhxBqw%3D%22%2C%22ts%22%3A1685444654944%2C%22ridx%22%3A-1%2C%22cipher%22%3A%7B%22sv%22%3A%22CJC%3D%22%2C%22ad%22%3A%22CtG3YtCyDtc3EJCmC2OyYm%3D%3D%22%2C%22od%22%3A%22CzY5ZJU0CQU3C2OyEJvwYq%3D%3D%22%2C%22ov%22%3A%22CzC%3D%22%2C%22ud%22%3A%22CtG3YtCyDtc3EJCmC2OyYm%3D%3D%22%7D%2C%22ciphertype%22%3A5%2C%22version%22%3A%221.2.0%22%2C%22appname%22%3A%22com.jingdong.app.mall%22%7D;jdSupportDarkMode/0;Mozilla/5.0 (Linux; Android 13; MI 8 Build/TKQ1.220905.001; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/89.0.4389.72 MQQBrowser/6.2 TBS/046247 Mobile Safari/537.36",
 				"Referer": API.app_api_header_referer,
 				"Sec-Fetch-Mode": "cors"
-
 			}
 		};
-		const params = { pageNo: pageNo, pageSize: 20, key: name, status: status, sort: "endTime_asc", specialType: 1, mpSource: 1, sourceTag: 2 };
+
 		const bodyParams = {};
 		// data的encode方式有点奇怪
 		bodyParams.body = JSON.stringify(params);
@@ -750,7 +753,7 @@ function searchProduct(params = {}) {
 /**
  * 跳转到商品界面
  */
-async function goToProductPage(productId) {
+async function goToProductPage (productId) {
 
 	// 初始化浏览器
 	await initBrowser();
