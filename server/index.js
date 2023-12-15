@@ -4,12 +4,16 @@ const querystring = require("querystring");
 const https = require("https");
 const API = require("./api");
 const dayjs = require('dayjs');
+const { Notification } = require('electron');
+const Constants = require("../constant/constants");
 
 // 商品的ID
 let Item_ID;
 
 // 最高能接受的价格
 let MaxPrice;
+// 最低价格
+let MinPrice;
 
 // 初始刷新频率
 let NextRefreshTime = 2000;
@@ -33,18 +37,18 @@ let isLogin = false;
 let Markup = 2;
 // 最后出价倒数时间（毫秒）
 let LastBidCountdownTime = 300;
-// 是否为一口价
-let IsFixedPrice = false;
+// 出价方式
+let BiddingMethod = Constants.BiddingMethod.ON_OTHERS_BID;
 const noticeTitle = "京东夺宝岛助手提示";
 
 /**
  * 启动浏览器，加载页面
  * */
-function goToBid(id, price, bidder, markup, lastBidCountdownTime, isFixedPrice) {
-
+function goToBid(params) {
+	const { id, price, bidder, markup, lastBidCountdownTime, biddingMethod, minPrice } = params;
 	if (Browser && Browser.isConnected()) {
 		if (isLogin) {
-			new window.Notification(noticeTitle, { body: "抢购已开始" });
+			new Notification({ title: noticeTitle, body: "抢购已开始" }).show();
 			return;
 		}
 	}
@@ -54,22 +58,24 @@ function goToBid(id, price, bidder, markup, lastBidCountdownTime, isFixedPrice) 
 
 	Item_ID = id;
 	MaxPrice = price;
+	MinPrice = minPrice;
 	Item_URL = API.item_url + Item_ID;
 	Bidder = bidder;
 	Markup = markup;
 	LastBidCountdownTime = lastBidCountdownTime;
-	IsFixedPrice = isFixedPrice;
-	console.log("goToBid Item_URL = ", Item_URL, Item_ID, MaxPrice, Bidder, Markup, LastBidCountdownTime, IsFixedPrice);
+	BiddingMethod = biddingMethod;
+	console.log("goToBid Item_URL = ", Item_URL, Item_ID, MaxPrice, MinPrice, Bidder, Markup, LastBidCountdownTime, BiddingMethod);
 	initBid();
 }
 
 /**
  * 更新
  * */
-async function updateBid(id, price, bidder, markup, lastBidCountdownTime, isFixedPrice) {
+async function updateBid(params) {
+	const { id, price, bidder, markup, lastBidCountdownTime, biddingMethod, minPrice } = params;
 
 	if (!isLogin) {
-		new window.Notification(noticeTitle, { body: "请先点击开始抢购，并登录" });
+		new Notification({ title: noticeTitle, body: "请先点击开始抢购，并登录" }).show();
 		return;
 	}
 
@@ -80,13 +86,14 @@ async function updateBid(id, price, bidder, markup, lastBidCountdownTime, isFixe
 		// 更新参数
 		Item_ID = id;
 		MaxPrice = price;
+		MinPrice = minPrice;
 		Item_URL = API.item_url + Item_ID;
 		Bidder = bidder;
 		Markup = markup;
 		LastBidCountdownTime = lastBidCountdownTime;
-		IsFixedPrice = isFixedPrice;
+		BiddingMethod = biddingMethod;
 
-		console.log("updateBid Item_URL = ", Item_URL, Item_ID, MaxPrice, Bidder, Markup, LastBidCountdownTime, IsFixedPrice);
+		console.log("updateBid Item_URL = ", Item_URL, Item_ID, MaxPrice, MinPrice, Bidder, Markup, LastBidCountdownTime, BiddingMethod);
 
 		if (!page.isClosed()) {
 			// 关闭之前的页面
@@ -100,7 +107,7 @@ async function updateBid(id, price, bidder, markup, lastBidCountdownTime, isFixe
 
 		handleGoToTargetPage();
 	} else {
-		new window.Notification(noticeTitle, { body: "请未找到抢购的浏览器窗口" });
+		new Notification({ title: noticeTitle, body: "请未找到抢购的浏览器窗口" }).show();
 		return;
 	}
 }
@@ -176,7 +183,7 @@ function resetData() {
 	RefreshBatchInfoTimer && clearInterval(RefreshBatchInfoTimer);
 	CycleTimer && clearTimeout(CycleTimer);
 	OfferPriceTimer && clearTimeout(OfferPriceTimer);
-	IsFixedPrice = false;
+	BiddingMethod = Constants.BiddingMethod.ON_OTHERS_BID;
 }
 
 /**
@@ -390,12 +397,15 @@ function handlePriceAndTime() {
 	}
 
 	let isAboveMaxPrice = false;
-	if (IsFixedPrice) {
-		// 固定价格的处理方式
+	if (BiddingMethod == Constants.BiddingMethod.WITHIN_PRICE_RANGE ||
+		BiddingMethod == Constants.BiddingMethod.ONE_TIME_BID) {
+		// 判断是否超过最高价格
 		if (MaxPrice && (price >= MaxPrice)) {
 			isAboveMaxPrice = true;
 		}
-	} else {
+	}
+
+	if (BiddingMethod != Constants.BiddingMethod.ONE_TIME_BID) {
 		// 加价的处理方式
 		let bidPrice = price + Markup;
 		if (bidPrice > MaxPrice && price < MaxPrice) {
@@ -409,14 +419,14 @@ function handlePriceAndTime() {
 	if (isAboveMaxPrice) {
 		console.log("超过最高价格，抢购结束");
 		RefreshBatchInfoTimer && clearInterval(RefreshBatchInfoTimer);
-		new window.Notification(noticeTitle, { body: "超过最高价格，抢购结束" });
+		new Notification({ title: noticeTitle, body: "超过最高价格，抢购结束" }).show();
 		return;
 	}
 
 	if (time < 0) {
 		console.log("抢购时间结束");
 		clearInterval(RefreshBatchInfoTimer);
-		new window.Notification(noticeTitle, { body: "抢购时间结束" });
+		new Notification({ title: noticeTitle, body: "抢购时间结束" }).show();
 		return;
 	}
 
@@ -436,7 +446,7 @@ function handlePriceAndTime() {
 			try {
 				let bidPrice;
 				let isAboveMaxPrice = false;
-				if (IsFixedPrice) {
+				if (BiddingMethod == Constants.BiddingMethod.ONE_TIME_BID) {
 					// 固定价格的处理方式
 					bidPrice = MaxPrice;
 					if (MaxPrice && (NowPrice >= MaxPrice)) {
@@ -445,6 +455,14 @@ function handlePriceAndTime() {
 				} else {
 					// 加价的处理方式
 					bidPrice = (NowPrice || 1) + Markup;
+
+					if (BiddingMethod == Constants.BiddingMethod.WITHIN_PRICE_RANGE) {
+						if (MinPrice && bidPrice < MinPrice) {
+							// 当前出价小于最小出价额，则以最小出价额进行出价
+							bidPrice = MinPrice
+						}
+					}
+
 					if (bidPrice > MaxPrice && (NowPrice || 1) < MaxPrice) {
 						// 当前出价加上出价幅度大于最大价格，并且当前出价小于最大价格时，使用最大价格进行购买
 						bidPrice = MaxPrice;
@@ -459,7 +477,7 @@ function handlePriceAndTime() {
 				RefreshBatchInfoTimer && clearInterval(RefreshBatchInfoTimer);
 				if (isAboveMaxPrice) {
 					console.log("超过最高价格，抢购结束");
-					new window.Notification(noticeTitle, { body: "超过最高价格，抢购结束" });
+					new Notification({ title: noticeTitle, body: "超过最高价格，抢购结束" }).show();
 				} else {
 					console.log(new Date().getTime() + ":" + `出价${bidPrice}`);
 					await buyByAPI(bidPrice);
@@ -572,7 +590,7 @@ function requestOfferPrice(para) {
 				console.log("requestOfferPrice end 出价:", price, ", 当前时间：", dayjs().format('YYYY-MM-DD HH:mm:sss'), new Date().getTime(), " , 结果:" + rawData);
 				const parsedData = JSON.parse(rawData);
 				if (parsedData.result && parsedData.result.message) {
-					new window.Notification(noticeTitle, { body: parsedData.result.message });
+					new Notification({ title: noticeTitle, body: parsedData.result.message }).show();
 				}
 				resolve();
 			});
@@ -664,7 +682,8 @@ function getBidDetail(bidId) {
  * 搜索产品
  * status: ""：全部，1：即将开始，2：正在进行
  * */
-function searchProduct(name, pageNo = 1, status = "") {
+function searchProduct(params = {}) {
+	const { name, pageNo = 1, status = "" } = params;
 	return new Promise((resolve, reject) => {
 
 		console.log("searchProduct name = ", name, " , pageNo = ", pageNo, " , status = ", status);

@@ -1,6 +1,6 @@
 {
 	"name": "JDTreasureGrabber",
-	"version": "0.2.15",
+	"version": "0.3.0",
 	"author": "hogan <hogan01.id@gmail.com> (https://github.com/HoganGolden)",
 	"private": true,
 	"main": "main.js",
@@ -12,28 +12,28 @@
 		"build": "vue-cli-service build",
 		"lint": "vue-cli-service lint",
 		"dist": "vue-cli-service build && electron-builder --publish never",
-		"start": "electron .",
+		"start": "chcp 65001 && electron .",
 		"release": "vue-cli-service build && electron-builder --publish always"
 	},
 	"dependencies": {
+		"@vueuse/core": "^10.7.0",
 		"carlo": "^0.9.46",
 		"core-js": "^3.16.3",
 		"dayjs": "^1.11.7",
 		"puppeteer-core": "^20.7.2",
-		"vue": "^2.6.14"
+		"vue": "^3.3.11"
 	},
 	"devDependencies": {
-		"@vue/cli-plugin-babel": "^4.5.13",
-		"@vue/cli-plugin-eslint": "^4.5.13",
-		"@vue/cli-service": "^4.5.13",
+		"@vue/cli-plugin-babel": "^5.0.8",
+		"@vue/cli-plugin-eslint": "^5.0.8",
+		"@vue/cli-service": "^5.0.8",
 		"babel-eslint": "^10.0.3",
 		"babel-plugin-component": "^1.1.1",
 		"electron": "^25.1.1",
 		"electron-builder": "^24.4.0",
-		"element-ui": "^2.15.5",
-		"eslint": "^6.7.2",
-		"eslint-plugin-vue": "^6.2.2",
-		"vue-template-compiler": "^2.6.14"
+		"element-plus": "^2.4.3",
+		"eslint": "^7.32.0",
+		"eslint-plugin-vue": "^9.19.2"
 	},
 	"eslintConfig": {
 		"root": true,
@@ -41,13 +41,15 @@
 			"node": true
 		},
 		"extends": [
-			"plugin:vue/essential",
+			"plugin:vue/vue3-essential",
 			"eslint:recommended"
 		],
 		"parserOptions": {
 			"parser": "babel-eslint"
 		},
-		"rules": {}
+		"rules": {
+			"no-unused-vars": "off"
+		}
 	},
 	"browserslist": [
 		"> 1%",
