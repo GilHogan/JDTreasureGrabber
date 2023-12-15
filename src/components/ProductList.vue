@@ -5,7 +5,7 @@
       <el-col :span="4">
         <el-input
           size="small"
-          placeholder="输入商品名称进行搜索"
+          placeholder="搜索你想要的商品"
           v-model="productName"
           @keyup.enter="search"
         />
@@ -96,7 +96,7 @@
       <el-table-column prop="spectatorCount" label="围观数"> </el-table-column>
     </el-table>
     <el-pagination
-      layout="prev, pager, next"
+      layout="prev, pager, next, jumper"
       :page-count="productSearchResult.pageCount"
       :page-size="20"
       :current-page="productSearchResult.pageNo"
@@ -108,7 +108,7 @@
 </template>
 
 <script>
-import { defineComponent, reactive, computed, toRefs } from "vue";
+import { defineComponent, reactive, computed, toRefs, onMounted } from "vue";
 const dayjs = require("dayjs");
 const API = require("../../server/api");
 
@@ -117,12 +117,16 @@ export default defineComponent({
   props: ["setToCurrentBidAndFetchDetail"],
   emits: [],
   setup(props, context) {
+    onMounted(() => {
+      dataMap.fetchProduct();
+    });
+
     const dataMap = reactive({
       tableRef: null,
       tableLoading: false,
       dayjs: dayjs,
       productName: "",
-      status: "",
+      status: 2,
       options: [
         {
           value: "",
@@ -159,18 +163,29 @@ export default defineComponent({
       fetchProduct(pageNo = 1) {
         if (window.ipc) {
           dataMap.tableLoading = true;
+          const searchName = dataMap.productName;
           window.ipc
             .sendInvoke("toMain", {
               event: "fetchProduct",
               params: {
-                name: dataMap.productName,
+                name: searchName,
                 pageNo: pageNo,
                 status: dataMap.status,
               },
             })
             .then((data) => {
               if (data) {
-                dataMap.productSearchResult = data || {};
+                // 有无商品调用接口不同，返回数据格式也不同
+                if (searchName) {
+                  dataMap.productSearchResult = data || {};
+                } else {
+                  dataMap.productSearchResult = {
+                    pageCount: Math.ceil(data.totalNumber / 20),
+                    count: data.totalNumber,
+                    pageNo: pageNo,
+                    itemList: data.auctionInfos,
+                  };
+                }
               } else {
                 dataMap.productSearchResult = { pageCount: 0 };
               }
