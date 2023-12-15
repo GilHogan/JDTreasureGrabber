@@ -18,27 +18,6 @@
     <div id="app"></div>
     <!-- built files will be auto injected -->
     <script>
-        const { goToBid, updateBid, getBidDetail, searchProduct, goToProductPage } = require("../server/index");
-
-        function startBid (id, price, bidder, markup, lastBidCountdownTime, isFixedPrice) {
-            goToBid(id, price, bidder, markup, lastBidCountdownTime, isFixedPrice);
-        }
-
-        function fetchBidDetail (id) {
-            return getBidDetail(id);
-        }
-
-        function startUpdateBid (id, price, bidder, markup, lastBidCountdownTime, isFixedPrice) {
-            updateBid(id, price, bidder, markup, lastBidCountdownTime, isFixedPrice);
-        }
-
-        function fetchProduct (name, pageNo, status) {
-            return searchProduct(name, pageNo, status);
-        }
-
-        function handleGoToProductPage (productId) {
-            return goToProductPage(productId);
-        }
 
     </script>
 </body>

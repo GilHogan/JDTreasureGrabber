@@ -1,4 +1,6 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, ipcMain } = require('electron');
+const path = require('node:path');
+const { ipcHandle } = require("./server/ipcHandle");
 
 function createWindow() {
 	// 创建浏览器窗口
@@ -6,20 +8,36 @@ function createWindow() {
 		width: 1350,
 		height: 800,
 		webPreferences: {
-			// https://blog.csdn.net/qq_35066582/article/details/114457490
-			nodeIntegration: true,
-			contextIsolation: false
+			nodeIntegration: false,
+			contextIsolation: true,
+			enableRemoteModule: false,
+			preload: path.join(__dirname, "preload.js") // use a preload script
 		},
-		icon: __dirname + "/public/favicon.ico"
+		icon: path.join(__dirname, 'public/favicon.ico')
 	});
 
 	// 并且为你的应用加载index.html
-	win.loadFile('./pages/index.html');
+	win.loadFile(path.join(__dirname, "pages/index.html"));
 
 	// 打开开发者工具
 	// win.webContents.openDevTools();
 }
 
+// ipcRenderer.invoke 处理
+ipcMain.handle("toMain", async (e, args) => {
+	return await ipcHandle(e, args);
+})
+
+// ipcRenderer.on 处理
+ipcMain.on("toMain", async (e, args) => {
+	if (!args || !args.event) {
+        return;
+    }
+	const data = await ipcHandle(e, args);
+	const webContents = e.sender;
+    const win = BrowserWindow.fromWebContents(webContents)
+	win.webContents.send("fromMain", { event: args.event, data: data });
+});
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.

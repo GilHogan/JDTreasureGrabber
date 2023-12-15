@@ -7,7 +7,7 @@
           size="small"
           placeholder="输入商品名称进行搜索"
           v-model="productName"
-          @keyup.enter.native="search"
+          @keyup.enter="search"
         />
       </el-col>
       <el-col :span="3" style="margin: 0 5px">
@@ -16,7 +16,7 @@
             v-for="item in options"
             :key="item.value"
             :label="item.label"
-            v-model="item.value"
+            :value="item.value"
           >
           </el-option>
         </el-select>
@@ -26,24 +26,36 @@
       </el-col>
     </el-row>
     <el-table
+      ref="tableRef"
       :data="productSearchResult.itemList || []"
       border
       max-height="500"
-      size="mini"
+      size="small"
+      v-loading="tableLoading"
     >
       <el-table-column type="index" label="#" width="50"></el-table-column>
-      <el-table-column prop="id" label="id" width="100"></el-table-column>
+      <el-table-column prop="id" label="id" width="100">
+        <template #default="scope">
+          <el-tooltip content="设为当前抢购商品，并查看详情" placement="top">
+            <span class="product-link" @click="searchItemInfo(scope.row.id)">{{
+              scope.row.id
+            }}</span>
+          </el-tooltip>
+        </template>
+      </el-table-column>
       <el-table-column prop="productName" label="名称" width="350">
-        <template slot-scope="scope">
-          <span
-            class="product-link"
-            @click="handleGoToProductPage(scope.row.id)"
-            >{{ scope.row.productName }}</span
-          >
+        <template #default="scope">
+          <el-tooltip content="在浏览器中查看" placement="top">
+            <span
+              class="product-link"
+              @click="handleGoToProductPage(scope.row.id)"
+              >{{ scope.row.productName }}</span
+            >
+          </el-tooltip>
         </template>
       </el-table-column>
       <el-table-column label="时间" width="255">
-        <template slot-scope="scope">
+        <template #default="scope">
           <span>{{
             `${dayjs(scope.row.startTime).format(
               "YYYY-MM-DD HH:mm:ss"
@@ -52,7 +64,7 @@
         </template>
       </el-table-column>
       <el-table-column label="状态" width="70">
-        <template slot-scope="scope">
+        <template #default="scope">
           <span>{{
             scope.row.status == 1
               ? "即将开始"
@@ -65,51 +77,52 @@
       <el-table-column prop="quality" label="质量" width="70">
       </el-table-column>
       <el-table-column prop="primaryPic" label="封面">
-        <template slot-scope="scope">
-          <el-image
-            style="width: 100px; height: 100px"
-            :src="imageUrl(scope.row.primaryPic)"
-            :preview-src-list="[previewUrl(scope.row.primaryPic)]"
-          >
-          </el-image>
+        <template #default="scope">
+          <el-tooltip content="点击预览" placement="top">
+            <el-image
+              style="width: 100px; height: 100px"
+              :src="imageUrl(scope.row.primaryPic)"
+              :preview-src-list="[previewUrl(scope.row.primaryPic)]"
+              :z-index="999"
+              :preview-teleported="true"
+            >
+            </el-image>
+          </el-tooltip>
         </template>
       </el-table-column>
       <el-table-column prop="minPrice" label="起步价"> </el-table-column>
       <el-table-column prop="cappedPrice" label="封顶价"> </el-table-column>
       <el-table-column prop="currentPrice" label="当前价"></el-table-column>
       <el-table-column prop="spectatorCount" label="围观数"> </el-table-column>
-      <!-- <el-table-column label="实际结束时间" width="135">
-        <template slot-scope="scope">
-          <span>{{
-            scope.row.actualEndTime &&
-            dayjs(scope.row.actualEndTime).format("YYYY-MM-DD HH:mm:ss")
-          }}</span>
-        </template>
-      </el-table-column> -->
     </el-table>
     <el-pagination
       layout="prev, pager, next"
       :page-count="productSearchResult.pageCount"
       :page-size="20"
       :current-page="productSearchResult.pageNo"
-      @current-change="pageChange"
+      @current-change="fetchProduct"
       :total="productSearchResult.count"
+      class="pagination-class"
     />
   </div>
 </template>
 
 <script>
+import { defineComponent, reactive, computed, toRefs } from "vue";
 const dayjs = require("dayjs");
 const API = require("../../server/api");
 
-export default {
+export default defineComponent({
   name: "ProductList",
-  props: ["productSearchResult"],
-  data() {
-    return {
+  props: ["setToCurrentBidAndFetchDetail"],
+  emits: [],
+  setup(props, context) {
+    const dataMap = reactive({
+      tableRef: null,
+      tableLoading: false,
       dayjs: dayjs,
       productName: "",
-      status: 2,
+      status: "",
       options: [
         {
           value: "",
@@ -124,45 +137,70 @@ export default {
           label: "正在进行",
         },
       ],
+      imageUrl: computed(
+        () => (primaryPic) => API.image_url + "n1/s250x250_jfs" + primaryPic
+      ),
+      previewUrl: computed(
+        () => (primaryPic) => API.image_url + "n1/s800x800_jfs" + primaryPic
+      ),
+      productSearchResult: {
+        pageCount: 0,
+      },
+      handleGoToProductPage(productId) {
+        window.ipc &&
+          window.ipc.send("toMain", {
+            event: "handleGoToProductPage",
+            params: productId,
+          });
+      },
+      search() {
+        dataMap.fetchProduct();
+      },
+      fetchProduct(pageNo = 1) {
+        if (window.ipc) {
+          dataMap.tableLoading = true;
+          window.ipc
+            .sendInvoke("toMain", {
+              event: "fetchProduct",
+              params: {
+                name: dataMap.productName,
+                pageNo: pageNo,
+                status: dataMap.status,
+              },
+            })
+            .then((data) => {
+              if (data) {
+                dataMap.productSearchResult = data || {};
+              } else {
+                dataMap.productSearchResult = { pageCount: 0 };
+              }
+              // 查询后滚动条滚动到列表顶部
+              dataMap.tableRef.scrollTo({ top: 0 });
+            })
+            .catch((e) => console.log("fetchProduct error = ", e))
+            .finally(() => {
+              dataMap.tableLoading = false;
+            });
+        }
+      },
+      searchItemInfo(productId) {
+        context.emit("setToCurrentBidAndFetchDetail", productId);
+      },
+    });
+
+    return {
+      ...toRefs(dataMap),
     };
   },
-  computed: {
-    imageUrl() {
-      return function (primaryPic) {
-        return API.image_url + "n1/s250x250_jfs" + primaryPic;
-      };
-    },
-    previewUrl() {
-      return function (primaryPic) {
-        return API.image_url + "n1/s800x800_jfs" + primaryPic;
-      };
-    },
-  },
-  methods: {
-    search() {
-      this.$emit("fetchProduct", {
-        name: this.productName,
-        pageNo: 1,
-        status: this.status,
-      });
-    },
-    pageChange(pageNo) {
-      this.$emit("fetchProduct", {
-        name: this.productName,
-        pageNo: pageNo,
-        status: this.status,
-      });
-    },
-    handleGoToProductPage(productId) {
-      this.$emit("goToProductPage", productId);
-    },
-  },
-};
+});
 </script>
 
 <style scoped>
 .product-link {
   cursor: pointer;
   color: #2f81f7;
+}
+.pagination-class {
+  float: right;
 }
 </style>
