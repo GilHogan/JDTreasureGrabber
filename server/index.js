@@ -6,6 +6,7 @@ const API = require("./api");
 const dayjs = require('dayjs');
 const { Notification } = require('electron');
 const Constants = require("../constant/constants");
+const consoleUtil = require('./consoleLogUtil');
 
 // 商品的ID
 let Item_ID;
@@ -64,7 +65,7 @@ function goToBid (params) {
 	Markup = markup;
 	LastBidCountdownTime = lastBidCountdownTime;
 	BiddingMethod = biddingMethod;
-	console.log("goToBid Item_URL = ", Item_URL, Item_ID, MaxPrice, MinPrice, Bidder, Markup, LastBidCountdownTime, BiddingMethod);
+	consoleUtil.log("goToBid Item_URL = ", Item_URL, Item_ID, MaxPrice, MinPrice, Bidder, Markup, LastBidCountdownTime, BiddingMethod);
 	initBid();
 }
 
@@ -93,7 +94,7 @@ async function updateBid (params) {
 		LastBidCountdownTime = lastBidCountdownTime;
 		BiddingMethod = biddingMethod;
 
-		console.log("updateBid Item_URL = ", Item_URL, Item_ID, MaxPrice, MinPrice, Bidder, Markup, LastBidCountdownTime, BiddingMethod);
+		consoleUtil.log("updateBid Item_URL = ", Item_URL, Item_ID, MaxPrice, MinPrice, Bidder, Markup, LastBidCountdownTime, BiddingMethod);
 
 		if (!page.isClosed()) {
 			// 关闭之前的页面
@@ -103,7 +104,7 @@ async function updateBid (params) {
 		}
 		page = await Browser.newPage();
 
-		console.log("updateBid page = ", page)
+		consoleUtil.log("updateBid page = ", page)
 
 		handleGoToTargetPage();
 	} else {
@@ -121,12 +122,12 @@ async function initBid () {
 
 	page = await Browser.newPage();
 
-	console.log("initBid page = ", page)
+	consoleUtil.log("initBid page = ", page)
 
 	page.on("load", async function () {
 
-		console.log("initBid load = ", page.url())
-		console.log("initBid load = ", API.login_success_redirect_url)
+		consoleUtil.log("initBid load = ", page.url())
+		consoleUtil.log("initBid load = ", API.login_success_redirect_url)
 
 		// 利用页面加载完成事件，判断是否是登录成功后的页面跳转
 		if (page.url() === API.login_success_redirect_url || page.url() === (API.login_success_redirect_url + "/" + Item_ID)) {
@@ -160,7 +161,7 @@ async function initBrowser () {
 	});
 
 	Browser.on("disconnected", () => {
-		console.log("Browser on disconnected");
+		consoleUtil.log("Browser on disconnected");
 		// 监听浏览器断开连接, 重置数据
 		resetData();
 		isLogin = false;
@@ -201,10 +202,10 @@ async function handleGoToTargetPage () {
 	let jd_cookie = await page.cookies(API.login_url);
 	let page_cookie = await page.cookies();
 	Cookie = mergeCookie(jd_cookie, page_cookie);
-	console.log("initBid load = ", jd_cookie, page_cookie)
-	console.log("initBid load Cookie = ", Cookie)
+	consoleUtil.log("initBid load = ", jd_cookie, page_cookie)
+	consoleUtil.log("initBid load Cookie = ", Cookie)
 
-	console.log("等待商品页面加载完成，请手动完成页面人机验证")
+	consoleUtil.log("等待商品页面加载完成，请手动完成页面人机验证")
 	await waitItemPageLoadFinish();
 	if (!page || page.isClosed()) {
 		// 页面关闭，则退出
@@ -239,7 +240,7 @@ async function handleGoToTargetPage () {
 
 						OfferPricePara = post_data_obj_body;
 
-						console.log("加密参数获取成功！！");
+						consoleUtil.log("加密参数获取成功！！");
 
 						request.abort();
 
@@ -276,13 +277,13 @@ async function waitItemPageLoadFinish () {
 				}
 				count++;
 				if (count >= sleetSeconds * 120) {
-					console.log("page start reload.")
+					consoleUtil.log("page start reload.")
 					count = 0;
 					// 刷新页面，解决页面倒计时不准确的问题
 					await page.reload();
 				}
 			} catch (error) {
-				console.log(error);
+				consoleUtil.log(error);
 			}
 
 		}
@@ -299,7 +300,7 @@ function getBatchInfo () {
 		const path = `${API.api_jd_path}?functionId=paipai.auction.current_bid_info&t=${new Date().getTime()}&appid=paipai_sale_pc&client=pc&loginType=3&body=${encodeURI("{\"auctionId\":" + Item_ID + "}")}`;
 
 		const startTime = new Date().getTime();
-		console.log("getBatchInfo start 当前时间：" + dayjs(startTime).format('YYYY-MM-DD HH:mm:sss'), startTime)
+		consoleUtil.log("getBatchInfo start 当前时间：" + dayjs(startTime).format('YYYY-MM-DD HH:mm:sss'), startTime)
 
 		const options = {
 			hostname: API.api_jd_hostname,
@@ -313,7 +314,7 @@ function getBatchInfo () {
 
 		const req = https.request(options, (res) => {
 			let rawData = "";
-			// console.log("getBatchInfo get res = ", res)
+			// consoleUtil.log("getBatchInfo get res = ", res)
 
 			res.setEncoding('utf8');
 
@@ -324,30 +325,30 @@ function getBatchInfo () {
 			res.on('end', () => {
 				const endTime = new Date().getTime();
 				const offsetTime = endTime - startTime;
-				console.log("getBatchInfo end endTime = ", endTime, " , offsetTime = ", offsetTime);
+				consoleUtil.log("getBatchInfo end endTime = ", endTime, " , offsetTime = ", offsetTime);
 				try {
 					const parsedData = JSON.parse(rawData);
 					if (parsedData.result && parsedData.result.data && parsedData.result.data[Item_ID]) {
 						NowPrice = parsedData.result.data[Item_ID].currentPrice;
 						EndTime = parsedData.result.data[Item_ID].actualEndTime;
 						CurrentTime = parsedData.result.list[0];
-						console.log("getBatchInfo end origin CurrentTime = ", CurrentTime);
+						consoleUtil.log("getBatchInfo end origin CurrentTime = ", CurrentTime);
 						// 假定服务器的当前时间是接口获取到的时间加上请求耗时
 						CurrentTime = CurrentTime + offsetTime;
 						CurrentBidder = parsedData.result.data[Item_ID].currentBidder;
-						console.log("getBatchInfo get end NowPrice = ", NowPrice, ", CurrentTime = ", CurrentTime, ", EndTime = ", EndTime,
+						consoleUtil.log("getBatchInfo get end NowPrice = ", NowPrice, ", CurrentTime = ", CurrentTime, ", EndTime = ", EndTime,
 							", CurrentTime format = ", dayjs(CurrentTime).format('YYYY-MM-DD HH:mm:sss'), ", EndTime format = ", dayjs(EndTime).format('YYYY-MM-DD HH:mm:sss'),
 							", CurrentBidder = ", CurrentBidder);
 					}
 				} catch (e) {
-					console.error(e.message);
+					consoleUtil.error(e.message);
 				}
 				resolve();
 			});
 		});
 
 		req.on('error', (e) => {
-			console.error(`请求遇到问题: ${e.message}`);
+			consoleUtil.error(`请求遇到问题: ${e.message}`);
 			reject(e);
 		});
 
@@ -386,12 +387,12 @@ function handlePriceAndTime () {
 	const currentLocalTime = new Date().getTime();
 	const time = EndTime - CurrentTime;
 
-	console.log("当前价格：" + price, " , 最高价格：" + MaxPrice, " , 当前时间：" + dayjs(currentLocalTime).format('YYYY-MM-DD HH:mm:sss'));
-	console.log("剩余抢购时间 毫秒：" + time, " , 秒：" + parseInt(time / 1000));
-	console.log("当前出价人：" + CurrentBidder, " ,抢购用户账户名：" + Bidder);
+	consoleUtil.log("当前价格：" + price, " , 最高价格：" + MaxPrice, " , 当前时间：" + dayjs(currentLocalTime).format('YYYY-MM-DD HH:mm:sss'));
+	consoleUtil.log("剩余抢购时间 毫秒：" + time, " , 秒：" + parseInt(time / 1000));
+	consoleUtil.log("当前出价人：" + CurrentBidder, " ,抢购用户账户名：" + Bidder);
 
 	if (!OfferPricePara) {
-		console.log("正在获取加密参数");
+		consoleUtil.log("正在获取加密参数");
 		buyByPage(1);
 		return;
 	}
@@ -417,14 +418,14 @@ function handlePriceAndTime () {
 		}
 	}
 	if (isAboveMaxPrice) {
-		console.log("超过最高价格，抢购结束");
+		consoleUtil.log("超过最高价格，抢购结束");
 		RefreshBatchInfoTimer && clearInterval(RefreshBatchInfoTimer);
 		new Notification({ title: noticeTitle, body: "超过最高价格，抢购结束" }).show();
 		return;
 	}
 
 	if (time < 0) {
-		console.log("抢购时间结束");
+		consoleUtil.log("抢购时间结束");
 		clearInterval(RefreshBatchInfoTimer);
 		new Notification({ title: noticeTitle, body: "抢购时间结束" }).show();
 		return;
@@ -438,7 +439,7 @@ function handlePriceAndTime () {
 
 		let bidTime = time - LastBidCountdownTime;
 		bidTime <= 0 ? time - 100 : bidTime;
-		console.log(`${bidTime}毫秒后开始出价`);
+		consoleUtil.log(`${bidTime}毫秒后开始出价`);
 
 		if (OfferPriceTimer) clearTimeout(OfferPriceTimer);
 
@@ -473,20 +474,20 @@ function handlePriceAndTime () {
 				}
 
 				const currentRemainTime = EndTime - CurrentTime;
-				console.log(`${bidTime}毫秒后出价:${bidPrice}元，当前时间：${new Date().getTime()}, 上一次请求竞价信息后的剩余时间：${currentRemainTime}`);
+				consoleUtil.log(`${bidTime}毫秒后出价:${bidPrice}元，当前时间：${new Date().getTime()}, 上一次请求竞价信息后的剩余时间：${currentRemainTime}`);
 				RefreshBatchInfoTimer && clearInterval(RefreshBatchInfoTimer);
 				if (isAboveMaxPrice) {
-					console.log("超过最高价格，抢购结束");
+					consoleUtil.log("超过最高价格，抢购结束");
 					new Notification({ title: noticeTitle, body: "超过最高价格，抢购结束" }).show();
 				} else {
-					console.log(new Date().getTime() + ":" + `出价${bidPrice}`);
+					consoleUtil.log(new Date().getTime() + ":" + `出价${bidPrice}`);
 					await buyByAPI(bidPrice);
 				}
 				await sleep(currentRemainTime + 1000);
 				// 最后再获取商品信息，查看竞拍结果
 				getBatchInfo();
 			} catch (error) {
-				console.log(error);
+				consoleUtil.log(error);
 			}
 		}, bidTime);
 		return;
@@ -496,7 +497,7 @@ function handlePriceAndTime () {
 		try {
 			await getBatchInfo();
 		} catch (error) {
-			console.log(error);
+			consoleUtil.log(error);
 		}
 		handlePriceAndTime();
 	}, NextRefreshTime)
@@ -519,7 +520,7 @@ async function buyByPage (price) {
 	try {
 		await page.click("#InitCartUrl").catch();
 	} catch (e) {
-		console.log("buyByPage error: ", e)
+		consoleUtil.log("buyByPage error: ", e)
 	}
 }
 
@@ -528,13 +529,13 @@ async function buyByPage (price) {
  * */
 async function buyByAPI (price) {
 	if (OfferPricePara === null) {
-		console.log("没有正确获取到拍卖参数，无法执行购买");
+		consoleUtil.log("没有正确获取到拍卖参数，无法执行购买");
 	} else {
 		if (Bidder && CurrentBidder) {
 			const currentBidderArr = CurrentBidder.split("***");
 			if (currentBidderArr && currentBidderArr.length == 2) {
 				if (Bidder.startsWith(currentBidderArr[0]) && Bidder.endsWith(currentBidderArr[1])) {
-					console.log("当前出价人为自己，不进行出价操作");
+					consoleUtil.log("当前出价人为自己，不进行出价操作");
 					return;
 				}
 			}
@@ -542,7 +543,7 @@ async function buyByAPI (price) {
 
 		OfferPricePara.price = price;
 
-		console.log(`出价：${price}元`)
+		consoleUtil.log(`出价：${price}元`)
 		return requestOfferPrice({
 			functionId: API.offer_price_function_id,
 			body: OfferPricePara
@@ -561,7 +562,7 @@ function requestOfferPrice (para) {
 
 		let path = `${API.api_jd_path}?t=${CurrentTime}&appid=paipai_sale_pc`;
 
-		console.log("requestOfferPrice start 出价 = ", price, " , 当前时间：", dayjs().format('YYYY-MM-DD HH:mm:sss'), new Date().getTime());
+		consoleUtil.log("requestOfferPrice start 出价 = ", price, " , 当前时间：", dayjs().format('YYYY-MM-DD HH:mm:sss'), new Date().getTime());
 
 		const options = {
 			hostname: API.api_jd_hostname,
@@ -587,7 +588,7 @@ function requestOfferPrice (para) {
 			});
 
 			res.on('end', () => {
-				console.log("requestOfferPrice end 出价:", price, ", 当前时间：", dayjs().format('YYYY-MM-DD HH:mm:sss'), new Date().getTime(), " , 结果:" + rawData);
+				consoleUtil.log("requestOfferPrice end 出价:", price, ", 当前时间：", dayjs().format('YYYY-MM-DD HH:mm:sss'), new Date().getTime(), " , 结果:" + rawData);
 				const parsedData = JSON.parse(rawData);
 				if (parsedData.result && parsedData.result.message) {
 					new Notification({ title: noticeTitle, body: parsedData.result.message }).show();
@@ -597,7 +598,7 @@ function requestOfferPrice (para) {
 		});
 
 		req.on('error', (e) => {
-			console.error(`requestOfferPrice 请求遇到问题: ${e.message}`);
+			consoleUtil.error(`requestOfferPrice 请求遇到问题: ${e.message}`);
 			reject(e);
 		});
 
@@ -655,7 +656,7 @@ function getBidDetail (bidId) {
 
 			res.on('end', () => {
 				let data = null;
-				console.log("getBidDetail end rawData = ", rawData);
+				// consoleUtil.log("getBidDetail *end rawData = ", rawData);
 
 				try {
 					const parsedData = JSON.parse(rawData);
@@ -663,14 +664,14 @@ function getBidDetail (bidId) {
 						data = parsedData.result.data;
 					}
 				} catch (e) {
-					console.error(e.message);
+					consoleUtil.error(e.message);
 				}
 				resolve(data);
 			});
 		});
 
 		req.on('error', (e) => {
-			console.error(`getBidDetail 请求遇到问题: ${e.message}`);
+			consoleUtil.error(`getBidDetail 请求遇到问题: ${e.message}`);
 			reject(e);
 		});
 
@@ -686,7 +687,7 @@ function searchProduct (params = {}) {
 	const { name, pageNo = 1, status = "" } = params;
 	return new Promise((resolve, reject) => {
 
-		console.log("searchProduct name = ", name, " , pageNo = ", pageNo, " , status = ", status);
+		consoleUtil.log("searchProduct name = ", name, " , pageNo = ", pageNo, " , status = ", status);
 
 		let path, params;
 		if (name) {
@@ -734,14 +735,14 @@ function searchProduct (params = {}) {
 						}
 					}
 				} catch (e) {
-					console.error(e.message);
+					consoleUtil.error(e.message);
 				}
 				resolve(data);
 			});
 		});
 
 		req.on('error', (e) => {
-			console.error(`searchProduct 请求遇到问题: ${e.message}`);
+			consoleUtil.error(`searchProduct 请求遇到问题: ${e.message}`);
 			reject(e);
 		});
 
