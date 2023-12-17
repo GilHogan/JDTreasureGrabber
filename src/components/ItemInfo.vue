@@ -173,7 +173,7 @@ export default defineComponent({
     const dataMap = reactive({
       formRef: null,
       form: {
-        id: 380055941,
+        id: null,
         price: undefined,
         bidder: "",
         markup: 2,
@@ -201,7 +201,13 @@ export default defineComponent({
       ],
       Constants,
       searchItemInfo() {
-        context.emit("fetchBidDetail", dataMap.form.id);
+        dataMap.formRef.validate((valid) => {
+          if (valid) {
+            context.emit("fetchBidDetail", dataMap.form.id);
+          } else {
+            return false;
+          }
+        });
       },
       goToDid() {
         dataMap.formRef.validate((valid) => {
