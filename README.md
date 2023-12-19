@@ -26,7 +26,7 @@
 
 <img alt='review' src="assets\images\preview.png" width="70%" style="">
 
-## 开发相关命令
+## 开发相关
 
 - 安装模块
   ```
@@ -45,6 +45,8 @@
   ```
       npm run dist
   ```
+
+- arm架构的系统构建方式参考，[参考1](https://github.com/jordansissel/fpm/issues/1801#issuecomment-919877499)，[参考2](https://www.beekeeperstudio.io/blog/electron-apps-for-arm-and-raspberry-pi)
 
 ## 更新日志
 
