@@ -2,7 +2,6 @@
 const { goToBid, updateBid, getBidDetail, searchProduct, goToProductPage } = require("./index");
 
 async function ipcHandle(e, args) {
-    console.log("ipcHandle args = ", args)
     if (!args || !args.event) {
         return;
     }
