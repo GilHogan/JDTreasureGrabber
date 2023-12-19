@@ -28,7 +28,7 @@ function log(...msg) {
             currentWindow.webContents && currentWindow.webContents.send("fromMain", { event: "console", data: str });
         }
     } catch (error) {
-        console.error("consoleLogUtil log error:", error);
+        // console.error("consoleLogUtil log error:", error);
     }
 }
 
