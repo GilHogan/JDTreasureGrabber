@@ -37,10 +37,10 @@
       <el-col :span="21">
         <el-row justify="space-between">
           <el-col :span="11">
-            <el-input v-model="form.proxyUserName" placeholder="用户名" />
+            <el-input v-model="form.proxyUserName" placeholder="用户名 没有则不填" />
           </el-col>
           <el-col :span="11">
-            <el-input v-model="form.proxyPassword" placeholder="密码" />
+            <el-input v-model="form.proxyPassword" placeholder="密码 没有则不填" />
           </el-col>
         </el-row>
       </el-col>

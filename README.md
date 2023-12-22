@@ -12,19 +12,22 @@
 - 所有出价方式均为：在商品抢购结束时刻之前出价一次
 - 除了一口价出价方式外，加价出价方式均以他人的出价为基础进行加价
 - 关闭抢购商品所在的浏览器即为结束抢购；抢购还未开始时，最小化浏览器或离开商品页面不会进行后续的出价
+- telegram配置中，bot token和chat id参数的获取[参考](https://medium.com/@ManHay_Hong/how-to-create-a-telegram-bot-and-send-messages-with-python-4cf314d9fa3e)，或自行搜索解决
 
 ## 功能
 
 1. 支持多种出价方式进行抢购
 2. 设置最后出价时间（出价后提示抢购已结束时，调大最后出价时间试试）
 3. 商品信息查询
+4. 抢购结果通知到telegram
 
 ## 小技巧
 - 可以尝试应用多开，并登录不同的账号抢同一个商品可提高成功率
 
 ## 截图
 
-<img alt='review' src="assets\images\preview.png" width="70%" style="">
+<img alt='review' src="assets\images\preview.png" width="48%" style="">
+<img alt='review' src="assets\images\preview2.png" width="48%" style="">
 
 ## 开发相关
 
