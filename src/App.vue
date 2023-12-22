@@ -35,6 +35,10 @@ import ItemInfo from "./components/ItemInfo";
 import HistoryPrice from "./components/HistoryPrice";
 import BidInfo from "./components/BidInfo";
 import ProductList from "./components/ProductList";
+import { useDark } from "@vueuse/core";
+
+// 设置初始化主题模式
+useDark();
 
 export default defineComponent({
   name: "App",

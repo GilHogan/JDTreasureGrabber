@@ -90,7 +90,7 @@
           </el-tooltip>
         </template>
       </el-table-column>
-      <el-table-column prop="minPrice" label="起步价"> </el-table-column>
+      <el-table-column prop="startPrice" label="起步价"> </el-table-column>
       <el-table-column prop="cappedPrice" label="封顶价"> </el-table-column>
       <el-table-column prop="currentPrice" label="当前价"></el-table-column>
       <el-table-column prop="spectatorCount" label="围观数"> </el-table-column>
