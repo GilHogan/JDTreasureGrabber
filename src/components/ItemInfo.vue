@@ -1,5 +1,14 @@
 <template>
   <el-row justify="center">
+    <el-dialog
+      v-model="optionVisible"
+      title="选项"
+      width="60%"
+      :close-on-click-modal="false"
+    >
+      <CustomOption @closeOption="closeOption" />
+    </el-dialog>
+
     <el-form
       :inline="true"
       ref="formRef"
@@ -7,7 +16,12 @@
       label-width="70px"
       :rules="rules"
     >
-      <UseDark />
+      <el-form-item>
+        <el-button type="primary" size="small" @click="showOption"
+          >选项</el-button
+        >
+      </el-form-item>
+
       <el-form-item
         prop="id"
         label="商品ID"
@@ -116,13 +130,13 @@
 
 <script>
 import { defineComponent, reactive, toRefs } from "vue";
-import UseDark from "./UseDark";
+import CustomOption from "./CustomOption";
 import Constants from "../../constant/constants";
 
 export default defineComponent({
   name: "ItemInfo",
   components: {
-    UseDark,
+    CustomOption,
   },
   emits: ["fetchBidDetail", "go-to-bid", "update-bid"],
   setup(props, context) {
@@ -185,6 +199,7 @@ export default defineComponent({
         price: { validator: validatePrice, trigger: "blur" },
         minPrice: { validator: validateMinPrice, trigger: "blur" },
       },
+      optionVisible: false,
       biddingMethodOptions: [
         {
           value: Constants.BiddingMethod.ON_OTHERS_BID,
@@ -247,6 +262,12 @@ export default defineComponent({
         if (id) {
           dataMap.form.id = id;
         }
+      },
+      showOption() {
+        dataMap.optionVisible = true;
+      },
+      closeOption() {
+        dataMap.optionVisible = false;
       },
     });
 
