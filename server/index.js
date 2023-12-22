@@ -251,7 +251,7 @@ async function handleGoToTargetPage() {
 
 						request.abort();
 
-						handlePriceAndTime();
+						handlePriceAndTime(true);
 						return;
 					}
 				}
@@ -395,7 +395,7 @@ function refreshBatchInfo() {
  * 若剩余时间大于3s，每2s刷新一次，小于3s，就100ms刷新一次
  * 执行购买逻辑
  * */
-function handlePriceAndTime() {
+function handlePriceAndTime(isFirstHandlePrice = false) {
 
 	const price = NowPrice || 1;
 	const currentLocalTime = new Date().getTime();
@@ -456,6 +456,12 @@ function handlePriceAndTime() {
 		return;
 	}
 
+	if (isFirstHandlePrice) {
+		consoleUtil.log("抢购开始");
+		new Notification({ title: noticeTitle, body: "抢购开始" }).show();
+		handleSendNotice(`抢购开始`);
+	}
+
 	if (time < 5000) {
 		if (RefreshBatchInfoTimer === undefined) {
 			// 刷新当前竞价信息
@@ -511,7 +517,7 @@ function handlePriceAndTime() {
 				}
 				await sleep(currentRemainTime + 1000);
 				// 最后再获取商品信息，查看竞拍结果
-				getBatchInfo();
+				getBatchInfo(true);
 			} catch (error) {
 				consoleUtil.log(error);
 			}
