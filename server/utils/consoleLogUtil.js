@@ -28,6 +28,7 @@ function log(...msg) {
             currentWindow.webContents && currentWindow.webContents.send("fromMain", { event: "console", data: str });
         }
     } catch (error) {
+        // arm中主进程打印日志可能抛异常，先注释
         // console.error("consoleLogUtil log error:", error);
     }
 }
