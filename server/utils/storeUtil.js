@@ -16,8 +16,6 @@ function getUserData() {
 
 function setUserData(params) {
     const dataPath = path.join(app.getPath('userData'), 'data.json');
-    console.log("setUserData = ", params)
-
     fs.writeFileSync(
         dataPath,
         JSON.stringify(params),

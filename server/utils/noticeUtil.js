@@ -52,7 +52,7 @@ function sendTelMsg(botToken, chatId, msg, userData) {
                     reject("代理服务器连接失败");
                 }
             }).on('error', (err) => {
-                consoleUtil.error(`sendTelMsg 代理请求遇到问题: ${e.message}`);
+                consoleUtil.error(`sendTelMsg 代理请求遇到问题: ${err.message}`);
                 reject(err);
             }).end();
 
