@@ -809,6 +809,7 @@ function handleSendNotice(msg) {
 	封顶价：${info.maxPrice}
 	抢购开始时间：${info.startTime && dayjs(info.startTime).format("YYYY-MM-DD HH:mm:ss")}
 	抢购结束时间：${info.endTime && dayjs(info.endTime).format("YYYY-MM-DD HH:mm:ss")}
+	设定最低价：${MinPrice}
 	设定最高价：${MaxPrice}
 	当前价格：${NowPrice}
 	当前抢购人：${CurrentBidder}

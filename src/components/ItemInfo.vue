@@ -227,15 +227,7 @@ export default defineComponent({
       goToDid() {
         dataMap.formRef.validate((valid) => {
           if (valid) {
-            context.emit("go-to-bid", {
-              id: dataMap.form.id,
-              price: dataMap.form.price,
-              bidder: dataMap.form.bidder,
-              markup: dataMap.form.markup,
-              lastBidCountdownTime: dataMap.form.lastBidCountdownTime,
-              biddingMethod: dataMap.form.biddingMethod,
-              minPrice: dataMap.form.minPrice,
-            });
+            context.emit("go-to-bid", dataMap.getFormParams());
           } else {
             return false;
           }
@@ -244,15 +236,7 @@ export default defineComponent({
       updateBid() {
         dataMap.formRef.validate((valid) => {
           if (valid) {
-            context.emit("update-bid", {
-              id: dataMap.form.id,
-              price: dataMap.form.price,
-              bidder: dataMap.form.bidder,
-              markup: dataMap.form.markup,
-              lastBidCountdownTime: dataMap.form.lastBidCountdownTime,
-              biddingMethod: dataMap.form.biddingMethod,
-              minPrice: dataMap.form.minPrice,
-            });
+            context.emit("update-bid", dataMap.getFormParams());
           } else {
             return false;
           }
@@ -268,6 +252,25 @@ export default defineComponent({
       },
       closeOption() {
         dataMap.optionVisible = false;
+      },
+      getFormParams() {
+        let price = dataMap.form.price;
+        let minPrice = dataMap.form.minPrice;
+        if (
+          dataMap.form.biddingMethod == Constants.BiddingMethod.ON_OTHERS_BID
+        ) {
+          price = null;
+          minPrice = null;
+        } else if (
+          dataMap.form.biddingMethod == Constants.BiddingMethod.ONE_TIME_BID
+        ) {
+          minPrice = null;
+        }
+        return {
+          ...dataMap.form,
+          price,
+          minPrice,
+        };
       },
     });
 
