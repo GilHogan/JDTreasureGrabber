@@ -36,7 +36,11 @@
       <el-table-column type="index" label="#" width="50"></el-table-column>
       <el-table-column prop="id" label="id" width="100">
         <template #default="scope">
-          <el-tooltip content="设为当前抢购商品，并查看详情" placement="top">
+          <el-tooltip
+            content="设为当前抢购商品，并查看详情"
+            placement="top"
+            :hide-after="0"
+          >
             <span class="product-link" @click="searchItemInfo(scope.row.id)">{{
               scope.row.id
             }}</span>
@@ -45,7 +49,7 @@
       </el-table-column>
       <el-table-column prop="productName" label="名称" width="350">
         <template #default="scope">
-          <el-tooltip content="在浏览器中查看" placement="top">
+          <el-tooltip content="在浏览器中查看" placement="top" :hide-after="0">
             <span
               class="product-link"
               @click="handleGoToProductPage(scope.row.id)"
@@ -78,13 +82,14 @@
       </el-table-column>
       <el-table-column prop="primaryPic" label="封面">
         <template #default="scope">
-          <el-tooltip content="点击预览" placement="top">
+          <el-tooltip content="点击预览" placement="top" :hide-after="0">
             <el-image
               style="width: 100px; height: 100px"
               :src="imageUrl(scope.row.primaryPic)"
               :preview-src-list="[previewUrl(scope.row.primaryPic)]"
               :z-index="999"
               :preview-teleported="true"
+              :lazy="false"
             >
             </el-image>
           </el-tooltip>
@@ -142,7 +147,7 @@ export default defineComponent({
         },
       ],
       imageUrl: computed(
-        () => (primaryPic) => API.image_url + "n1/s250x250_jfs" + primaryPic
+        () => (primaryPic) => API.image_url + "n1/s100x100_jfs" + primaryPic
       ),
       previewUrl: computed(
         () => (primaryPic) => API.image_url + "n1/s800x800_jfs" + primaryPic
