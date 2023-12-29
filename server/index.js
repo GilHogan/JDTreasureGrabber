@@ -9,7 +9,6 @@ const Constants = require("../constant/constants");
 const consoleUtil = require('./utils/consoleLogUtil');
 const { sendNotice } = require('./utils/noticeUtil');
 const { getUserData, setUserDataProperty } = require('./utils/storeUtil');
-const COOKIES_KEY = "cookies";
 
 // 商品的ID
 let Item_ID;
@@ -129,7 +128,7 @@ async function initBid() {
 
 	consoleUtil.log("initBid page = ", page);
 
-	const { options = {}, [COOKIES_KEY]: cookies } = getUserData();
+	const { options = {}, [Constants.StoreKeys.COOKIES_KEY]: cookies } = getUserData();
 	// 是否自动登录的处理
 	if (options.enableAutoLogin && cookies && cookies.length > 0) {
 		// 监听获取用户登录信息的请求
@@ -257,7 +256,7 @@ async function handleGoToTargetPage() {
 	const page_cookie = await page.cookies();
 	Cookie = mergeCookie(jd_cookie, page_cookie);
 	// 更新用户配置中的 cookies
-	setUserDataProperty(COOKIES_KEY, page_cookie);
+	setUserDataProperty(Constants.StoreKeys.COOKIES_KEY, page_cookie);
 
 	consoleUtil.log("等待商品页面加载完成，请手动完成页面人机验证")
 	await waitItemPageLoadFinish();
