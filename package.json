@@ -1,6 +1,6 @@
 {
 	"name": "JDTreasureGrabber",
-	"version": "0.3.1",
+	"version": "0.3.2",
 	"author": "hogan <hogan01.id@gmail.com> (https://github.com/HoganGolden)",
 	"private": true,
 	"main": "main.js",
