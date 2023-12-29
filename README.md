@@ -20,14 +20,16 @@
 2. 设置最后出价时间（出价后提示抢购已结束时，调大最后出价时间试试）
 3. 商品信息查询
 4. 抢购结果通知到telegram
+5. 自动登录（记住登录信息）
 
 ## 小技巧
 - 可以尝试应用多开，并登录不同的账号抢同一个商品可提高成功率
 
-## 截图
+## 截图预览
 
-<img alt='review' src="assets\images\preview.png" width="48%" style="">
-<img alt='review' src="assets\images\preview2.png" width="48%" style="">
+<img alt='review' src="assets\images\preview.png" width="60%" style="">
+<img alt='review' src="assets\images\preview2.png" width="60%" style="">
+<img alt='review' src="assets\images\preview_telegram.png" width="60%" style="">
 
 ## 开发相关
 
