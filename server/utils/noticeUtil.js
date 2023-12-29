@@ -77,8 +77,8 @@ function postTelRequest(options, postData, resolve, reject) {
         });
 
         res.on('end', () => {
-            const parsedData = JSON.parse(rawData);
-            consoleUtil.log("sendTelMsg end parsedData = ", parsedData);
+            // const parsedData = JSON.parse(rawData);
+            // consoleUtil.log("sendTelMsg end parsedData = ", parsedData);
             resolve();
         });
     });
