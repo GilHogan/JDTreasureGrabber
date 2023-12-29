@@ -1,6 +1,6 @@
 
 const { goToBid, updateBid, getBidDetail, searchProduct, goToProductPage } = require("./index");
-const { getUserData, setUserData } = require("./utils/storeUtil");
+const { getUserDataProperty, setUserDataJsonProperty } = require("./utils/storeUtil");
 
 async function ipcHandle(e, args) {
     if (!args || !args.event) {
@@ -21,10 +21,10 @@ async function ipcHandle(e, args) {
         data = await goToProductPage(params);
     } else if (event == "handleGoToProductPage") {
         data = await goToProductPage(params);
-    } else if (event == "getUserData") {
-        data = getUserData(params);
-    } else if (event == "setUserData") {
-        setUserData(params);
+    } else if (event == "getUserDataProperty") {
+        data = getUserDataProperty(params);
+    } else if (event == "setUserDataJsonProperty") {
+        setUserDataJsonProperty(params.key, params.value);
     }
 
 

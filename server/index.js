@@ -8,6 +8,8 @@ const { Notification } = require('electron');
 const Constants = require("../constant/constants");
 const consoleUtil = require('./utils/consoleLogUtil');
 const { sendNotice } = require('./utils/noticeUtil');
+const { getUserData, setUserDataProperty } = require('./utils/storeUtil');
+const COOKIES_KEY = "cookies";
 
 // 商品的ID
 let Item_ID;
@@ -125,23 +127,68 @@ async function initBid() {
 
 	page = await Browser.newPage();
 
-	consoleUtil.log("initBid page = ", page)
+	consoleUtil.log("initBid page = ", page);
 
+	const { options = {}, [COOKIES_KEY]: cookies } = getUserData();
+	// 是否自动登录的处理
+	if (options.enableAutoLogin && cookies && cookies.length > 0) {
+		// 监听获取用户登录信息的请求
+		page.waitForResponse(async response => {
+			const responseUrl = response.url();
+			if (responseUrl.startsWith(API.get_user_info_url) && response.status() === 200) {
+				const responseText = await response.text() || "";
+				const responseJson = JSON.parse(responseText.substring(responseText.indexOf("(") + 1, responseText.lastIndexOf(")")));
+				consoleUtil.log("waitForResponse response responseJson = ", responseJson);
+				if (responseJson && responseJson.data && responseJson.data.isLogin) {
+					consoleUtil.log("waitForResponse response 111 = ");
+
+					// 登录成功
+					isLogin = true;
+					// 跳转到目标商品页面
+					handleGoToTargetPage();
+				} else {
+					// 登录处理
+					handleLogin();
+				}
+				// 提交响应请求结果
+				response.ok();
+				// 监听执行完成
+				return true;
+			}
+			return false;
+		}).catch((e) => {
+			consoleUtil.log("waitForResponse error: ", e);
+		});
+		// 有登录cookies，直接进入商品页面
+		await page.setCookie(...cookies);
+		page.goto(Item_URL).catch();
+	} else {
+		// 登录处理
+		handleLogin();
+	}
+
+}
+
+/**
+ * 登录处理
+ */
+function handleLogin() {
+	if (!page) {
+		return;
+	}
 	page.on("load", async function () {
-
-		consoleUtil.log("initBid load = ", page.url())
-		consoleUtil.log("initBid load = ", API.login_success_redirect_url)
+		const pageUrl = page.url();
+		consoleUtil.log("initBid load = ", pageUrl)
 
 		// 利用页面加载完成事件，判断是否是登录成功后的页面跳转
-		if (page.url() === API.login_success_redirect_url || page.url() === (API.login_success_redirect_url + "/" + Item_ID)) {
+		if (pageUrl === API.login_success_redirect_url || pageUrl === (API.login_success_redirect_url + "/" + Item_ID)) {
 			isLogin = true;
 			// 跳转到目标商品页面
 			handleGoToTargetPage();
 		}
 	});
-
-	// 首先加载登录页面
-	await page.goto(API.login_url).catch();
+	// 跳转到登录页面
+	page.goto(API.login_url).catch();
 
 }
 
@@ -200,15 +247,17 @@ async function handleGoToTargetPage() {
 	if (!page) {
 		return;
 	}
-
-	await page.goto(Item_URL);
+	const pageUrl = page.url();
+	if (Item_URL != pageUrl) {
+		await page.goto(Item_URL);
+	}
 
 	// 需要使用两个页面的cookie
-	let jd_cookie = await page.cookies(API.login_url);
-	let page_cookie = await page.cookies();
+	const jd_cookie = await page.cookies(API.login_url);
+	const page_cookie = await page.cookies();
 	Cookie = mergeCookie(jd_cookie, page_cookie);
-	consoleUtil.log("initBid load = ", jd_cookie, page_cookie)
-	consoleUtil.log("initBid load Cookie = ", Cookie)
+	// 更新用户配置中的 cookies
+	setUserDataProperty(COOKIES_KEY, page_cookie);
 
 	consoleUtil.log("等待商品页面加载完成，请手动完成页面人机验证")
 	await waitItemPageLoadFinish();
@@ -284,7 +333,6 @@ async function waitItemPageLoadFinish() {
 				}
 				count++;
 				if (count >= sleetSeconds * 120) {
-					consoleUtil.log("page start reload.")
 					count = 0;
 					// 刷新页面，解决页面倒计时不准确的问题
 					await page.reload();
@@ -307,7 +355,7 @@ function getBatchInfo(isLastQuery = false) {
 		const path = `${API.api_jd_path}?functionId=paipai.auction.current_bid_info&t=${new Date().getTime()}&appid=paipai_sale_pc&client=pc&loginType=3&body=${encodeURI("{\"auctionId\":" + Item_ID + "}")}`;
 
 		const startTime = new Date().getTime();
-		consoleUtil.log("getBatchInfo start 当前时间：" + dayjs(startTime).format('YYYY-MM-DD HH:mm:sss'), startTime)
+		// consoleUtil.log("getBatchInfo start 当前时间：" + dayjs(startTime).format('YYYY-MM-DD HH:mm:sss'), startTime)
 
 		const options = {
 			hostname: API.api_jd_hostname,
@@ -332,16 +380,14 @@ function getBatchInfo(isLastQuery = false) {
 			res.on('end', () => {
 				const endTime = new Date().getTime();
 				const offsetTime = endTime - startTime;
-				consoleUtil.log("getBatchInfo end endTime = ", endTime, " , offsetTime = ", offsetTime);
+				// consoleUtil.log("getBatchInfo end endTime = ", endTime, " , offsetTime = ", offsetTime);
 				try {
 					const parsedData = JSON.parse(rawData);
 					if (parsedData.result && parsedData.result.data && parsedData.result.data[Item_ID]) {
-						consoleUtil.log("getBatchInfo end parsedData.result.data[Item_ID] = ", parsedData.result.data[Item_ID]);
-
 						NowPrice = parsedData.result.data[Item_ID].currentPrice;
 						EndTime = parsedData.result.data[Item_ID].actualEndTime;
 						CurrentTime = parsedData.result.list[0];
-						consoleUtil.log("getBatchInfo end origin CurrentTime = ", CurrentTime);
+						// consoleUtil.log("getBatchInfo end origin CurrentTime = ", CurrentTime);
 						// 假定服务器的当前时间是接口获取到的时间加上请求耗时
 						CurrentTime = CurrentTime + offsetTime;
 						CurrentBidder = parsedData.result.data[Item_ID].currentBidder;
@@ -720,7 +766,7 @@ function searchProduct(params = {}) {
 	const { name, pageNo = 1, status = "" } = params;
 	return new Promise((resolve, reject) => {
 
-		consoleUtil.log("searchProduct name = ", name, " , pageNo = ", pageNo, " , status = ", status);
+		// consoleUtil.log("searchProduct name = ", name, " , pageNo = ", pageNo, " , status = ", status);
 
 		let path, params;
 		if (name) {
