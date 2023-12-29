@@ -1,16 +1,17 @@
 const { getUserData } = require("./storeUtil");
 const http = require('http');
+const Constants = require("../../constant/constants");
 
 const https = require("https");
 const consoleUtil = require('./consoleLogUtil');
 
 function sendNotice(msg) {
     consoleUtil.log("start sendNotice msg = ", msg);
-    const userData = getUserData();
-    const { enableTel, telBotToken, telChatId } = userData || {};
+    const userDataOptions = getUserData()[Constants.StoreKeys.OPTIONS_KEY];
+    const { enableTel, telBotToken, telChatId } = userDataOptions || {};
     if (enableTel && telBotToken && telChatId) {
         // 发送电报消息
-        sendTelMsg(telBotToken, telChatId, msg, userData)
+        sendTelMsg(telBotToken, telChatId, msg, userDataOptions)
             .catch((e) => { consoleUtil.log("sendTelMsg error = ", e); });
     }
 }
@@ -18,8 +19,8 @@ function sendNotice(msg) {
 /**
  * 发送电报消息
  */
-function sendTelMsg(botToken, chatId, msg, userData) {
-    const { enableHttpProxy, proxyHost, proxyPort, proxyUserName, proxyPassword } = userData;
+function sendTelMsg(botToken, chatId, msg, userDataOptions) {
+    const { enableHttpProxy, proxyHost, proxyPort, proxyUserName, proxyPassword } = userDataOptions;
     return new Promise((resolve, reject) => {
         const options = {
             hostname: "api.telegram.org",

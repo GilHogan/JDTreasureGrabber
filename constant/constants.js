@@ -5,4 +5,9 @@ module.exports = {
         WITHIN_PRICE_RANGE: 2, // 在价格区间内加价
         ONE_TIME_BID: 3, // 一口价
     },
+    // 存储数据的键
+    StoreKeys: {
+        COOKIES_KEY: "cookies",
+        OPTIONS_KEY: "options"
+    }
 }

@@ -97,7 +97,7 @@
 <script>
 import { defineComponent, reactive, toRefs, watch } from "vue";
 import { useDark, useToggle } from "@vueuse/core";
-const OPTIONS_KEY = "options";
+import Constants from "../../constant/constants";
 
 export default defineComponent({
   name: "CustomOption",
@@ -111,7 +111,7 @@ export default defineComponent({
           window.ipc
             .sendInvoke("toMain", {
               event: "getUserDataProperty",
-              params: OPTIONS_KEY,
+              params: Constants.StoreKeys.OPTIONS_KEY,
             })
             .then((data) => {
               console.log("getUserData data = ", data);
@@ -147,7 +147,7 @@ export default defineComponent({
         if (window.ipc) {
           window.ipc.send("toMain", {
             event: "setUserDataJsonProperty",
-            params: { key: OPTIONS_KEY, value: JSON.stringify(dataMap.form) },
+            params: { key: Constants.StoreKeys.OPTIONS_KEY, value: JSON.stringify(dataMap.form) },
           });
         }
         dataMap.handleClose();
