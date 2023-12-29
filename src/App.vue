@@ -14,7 +14,7 @@
             <history-price :history-data="historyData"> </history-price>
           </el-col>
           <el-col :span="11" style="margin-left: 20px">
-            <bid-info :info="info"></bid-info>
+            <bid-info :info="info" :historyData="historyData"></bid-info>
           </el-col>
         </el-row>
       </el-col>

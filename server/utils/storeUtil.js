@@ -23,4 +23,37 @@ function setUserData(params) {
     );
 }
 
-module.exports = { getUserData, setUserData };
+function setUserDataStr(strParams) {
+    const dataPath = path.join(app.getPath('userData'), 'data.json');
+    fs.writeFileSync(
+        dataPath,
+        strParams,
+        { encoding: "utf-8" }
+    );
+}
+
+function getUserDataProperty(key) {
+    return getUserData()[key];
+}
+
+function setUserDataProperty(key, value) {
+    const userData = getUserData();
+    userData[key] = value;
+    setUserData(userData);
+}
+
+function setUserDataJsonProperty(key, json) {
+    let obj;
+    try {
+        obj = JSON.parse(json);
+    } catch (err) {
+        // Invalid JSON
+    }
+    if (obj) {
+        const userData = getUserData();
+        userData[key] = obj;
+        setUserData(userData);
+    }
+}
+
+module.exports = { getUserData, setUserData, setUserDataStr, getUserDataProperty, setUserDataProperty, setUserDataJsonProperty };

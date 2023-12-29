@@ -37,10 +37,16 @@
       <el-col :span="21">
         <el-row justify="space-between">
           <el-col :span="11">
-            <el-input v-model="form.proxyUserName" placeholder="用户名 没有则不填" />
+            <el-input
+              v-model="form.proxyUserName"
+              placeholder="用户名 没有则不填"
+            />
           </el-col>
           <el-col :span="11">
-            <el-input v-model="form.proxyPassword" placeholder="密码 没有则不填" />
+            <el-input
+              v-model="form.proxyPassword"
+              placeholder="密码 没有则不填"
+            />
           </el-col>
         </el-row>
       </el-col>
@@ -67,21 +73,18 @@
         </el-row>
       </el-col>
     </el-form-item>
-    <!-- <el-form-item label="邮箱通知">
+    <el-form-item label="自动登录">
       <el-col :span="3">
         <el-row justify="start">
           <el-switch
-            v-model="form.enableEmail"
+            v-model="form.enableAutoLogin"
             inline-prompt
             active-text="启用"
             inactive-text="关闭"
           ></el-switch>
         </el-row>
       </el-col>
-      <el-col :span="21">
-        <el-input v-model="form.email" placeholder="邮箱号" />
-      </el-col>
-    </el-form-item> -->
+    </el-form-item>
   </el-form>
   <el-row justify="center">
     <el-col>
@@ -92,44 +95,39 @@
 </template>
 
 <script>
-import { defineComponent, reactive, toRefs, onMounted } from "vue";
+import { defineComponent, reactive, toRefs, watch } from "vue";
 import { useDark, useToggle } from "@vueuse/core";
+const OPTIONS_KEY = "options";
 
 export default defineComponent({
   name: "CustomOption",
-  props: [],
+  props: ["optionVisible"],
   emits: ["closeOption"],
   setup(props, context) {
-    onMounted(() => {
-      if (window.ipc) {
-        window.ipc
-          .sendInvoke("toMain", { event: "getUserData", params: {} })
-          .then((data) => {
-            console.log("getUserData data = ", data);
-            if (data) {
-              // 初始化表单中的用户配置数据
-              dataMap.form.enableTel = data.enableTel;
-              dataMap.form.telBotToken = data.telBotToken;
-              dataMap.form.telChatId = data.telChatId;
-              // dataMap.form.enableEmail = data.enableEmail;
-              // dataMap.form.email = data.email;
-              dataMap.form.enableHttpProxy = data.enableHttpProxy;
-              dataMap.form.proxyHost = data.proxyHost;
-              dataMap.form.proxyPort = data.proxyPort;
-              dataMap.form.proxyUserName = data.proxyUserName;
-              dataMap.form.proxyPassword = data.proxyPassword;
-
-              // 获取所有用户配置
-              dataMap.userOption = data;
-            }
-          })
-          .catch((e) => console.log("getUserData error = ", e));
-      }
-    });
+    watch(
+      () => props.optionVisible,
+      (newOptionVisible) => {
+        if (newOptionVisible && window.ipc) {
+          window.ipc
+            .sendInvoke("toMain", {
+              event: "getUserDataProperty",
+              params: OPTIONS_KEY,
+            })
+            .then((data) => {
+              console.log("getUserData data = ", data);
+              if (data) {
+                // 初始化表单中的用户配置数据
+                dataMap.form = data;
+              }
+            })
+            .catch((e) => console.log("getUserData error = ", e));
+        }
+      },
+      { immediate: true }
+    );
 
     const dataMap = reactive({
       formRef: null,
-      userOption: {},
       isDark: useDark(),
       toggleDark() {
         useToggle(dataMap.isDark);
@@ -138,26 +136,19 @@ export default defineComponent({
         enableTel: false,
         telBotToken: null,
         telChatId: null,
-        // enableEmail: false,
-        // email: null,
         enableHttpProxy: false,
         proxyHost: null,
         proxyPort: null,
         proxyUserName: null,
         proxyPassword: null,
+        enableAutoLogin: false,
       },
       handleSaveOptions() {
         if (window.ipc) {
-          let params;
-          if (
-            dataMap.userOption &&
-            Object.keys(dataMap.userOption).length !== 0
-          ) {
-            params = { ...dataMap.userOption, ...dataMap.form };
-          } else {
-            params = { ...dataMap.form };
-          }
-          window.ipc.send("toMain", { event: "setUserData", params: params });
+          window.ipc.send("toMain", {
+            event: "setUserDataJsonProperty",
+            params: { key: OPTIONS_KEY, value: JSON.stringify(dataMap.form) },
+          });
         }
         dataMap.handleClose();
       },

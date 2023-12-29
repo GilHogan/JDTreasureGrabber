@@ -11,6 +11,8 @@ const API = {
 	offer_price_function_id: "paipai.auction.offerPrice",
 	web_api_header_referer: "https://paipai.jd.com/",
 	app_api_header_referer: "https://paipai.m.jd.com/",
-	image_url: "https://img10.360buyimg.com/"
+	image_url: "https://img10.360buyimg.com/",
+	get_js_token_url: "https://gia.jd.com/jsTk.do",
+	get_user_info_url: "https://used-api.jd.com/common/user/info",
 };
 module.exports = API;

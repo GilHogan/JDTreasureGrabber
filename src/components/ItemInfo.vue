@@ -6,7 +6,7 @@
       width="60%"
       :close-on-click-modal="false"
     >
-      <CustomOption @closeOption="closeOption" />
+      <CustomOption @closeOption="closeOption" :optionVisible="optionVisible"/>
     </el-dialog>
 
     <el-form
