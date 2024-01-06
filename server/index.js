@@ -299,13 +299,9 @@ async function handleGoToTargetPage() {
 				if (post_data_obj && post_data_obj.body) {
 					const post_data_obj_body = JSON.parse(post_data_obj.body);
 					if (!OfferPricePara && post_data_obj_body && post_data_obj_body.auctionId && post_data_obj_body.auctionId == Item_ID) {
-
 						OfferPricePara = post_data_obj_body;
-
 						consoleUtil.log("加密参数获取成功！！");
-
 						request.abort();
-
 						handlePriceAndTime(true);
 						return;
 					}
@@ -329,6 +325,7 @@ async function waitForProductStart() {
 	let button = null;
 	const sleepSeconds = 1;
 	let pageReload = false;
+	const waitMilliseconds = ProductDetail.auctionInfo.startTime - ProductDetail.currentTime;
 
 	do {
 		if (page) {
@@ -337,8 +334,7 @@ async function waitForProductStart() {
 				if (button === null) {
 					await sleep(sleepSeconds * 1000);
 
-					if (!pageReload && ProductDetail && ProductDetail.auctionInfo) {
-						const waitMilliseconds = ProductDetail.auctionInfo.startTime - ProductDetail.currentTime;
+					if (!pageReload && waitMilliseconds > 0) {
 						// 等待商品开始抢购
 						await new Promise((resolve, reject) => {
 							WaitForProductStartTimer = setTimeout(function () {
@@ -346,6 +342,7 @@ async function waitForProductStart() {
 							}, waitMilliseconds)
 						});
 						if (page) {
+							consoleUtil.log("page start reload");
 							// 商品开始抢购时刷新页面，解决页面倒计时不准确，导致出价按钮更新不及时的问题
 							await page.reload();
 						}
