@@ -80,7 +80,7 @@
       </el-table-column>
       <el-table-column prop="quality" label="质量" width="70">
       </el-table-column>
-      <el-table-column prop="primaryPic" label="封面">
+      <el-table-column prop="primaryPic" label="封面" width="120">
         <template #default="scope">
           <el-tooltip content="点击预览" placement="top" :hide-after="0">
             <el-image
@@ -98,7 +98,7 @@
       <el-table-column prop="startPrice" label="起步价"> </el-table-column>
       <el-table-column prop="cappedPrice" label="封顶价"> </el-table-column>
       <el-table-column prop="currentPrice" label="当前价"></el-table-column>
-      <el-table-column prop="spectatorCount" label="围观数"> </el-table-column>
+      <!-- <el-table-column prop="spectatorCount" label="围观数"> </el-table-column> -->
     </el-table>
     <el-pagination
       layout="prev, pager, next, jumper"
