@@ -31,6 +31,7 @@ let CurrentTime;
 let Cookie = null;
 let RefreshBatchInfoTimer;
 let OfferPriceTimer;
+let WaitForProductStartTimer;
 let Bidder;
 let CurrentBidder;
 let Browser;
@@ -137,10 +138,8 @@ async function initBid() {
 			if (responseUrl.startsWith(API.get_user_info_url) && response.status() === 200) {
 				const responseText = await response.text() || "";
 				const responseJson = JSON.parse(responseText.substring(responseText.indexOf("(") + 1, responseText.lastIndexOf(")")));
-				consoleUtil.log("waitForResponse response responseJson = ", responseJson);
+				// consoleUtil.log("waitForResponse response responseJson = ", responseJson);
 				if (responseJson && responseJson.data && responseJson.data.isLogin) {
-					consoleUtil.log("waitForResponse response 111 = ");
-
 					// 登录成功
 					isLogin = true;
 					// 跳转到目标商品页面
@@ -236,6 +235,7 @@ function resetData() {
 	OfferPriceTimer && clearTimeout(OfferPriceTimer);
 	BiddingMethod = Constants.BiddingMethod.ON_OTHERS_BID;
 	ProductDetail = null;
+	WaitForProductStartTimer && clearTimeout(WaitForProductStartTimer);
 }
 
 /**
@@ -258,8 +258,17 @@ async function handleGoToTargetPage() {
 	// 更新用户配置中的 cookies
 	setUserDataProperty(Constants.StoreKeys.COOKIES_KEY, page_cookie);
 
-	consoleUtil.log("等待商品页面加载完成，请手动完成页面人机验证")
-	await waitItemPageLoadFinish();
+	// 查询商品详情
+	ProductDetail = await getBidDetail(Item_ID);
+	if (!ProductDetail || !ProductDetail.auctionInfo || !ProductDetail.auctionInfo.startTime || !ProductDetail.currentTime) {
+		consoleUtil.log("商品详情获取失败，请检查");
+		new Notification({ title: noticeTitle, body: "商品详情获取失败，请检查" }).show();
+		handleSendNotice(`商品详情获取失败，请检查`);
+		return;
+	}
+
+	consoleUtil.log("等待商品开始抢购")
+	await waitForProductStart();
 	if (!page || page.isClosed()) {
 		// 页面关闭，则退出
 		return;
@@ -267,8 +276,6 @@ async function handleGoToTargetPage() {
 
 	// 查询当前的价格和剩余时间
 	await getBatchInfo();
-	// 查询商品详情
-	ProductDetail = await getBidDetail(Item_ID);
 
 	// 启用拦截器
 	await page.setRequestInterception(true).catch();
@@ -316,30 +323,38 @@ async function handleGoToTargetPage() {
 }
 
 /**
-* 判断是否进入商品页面，因为会进行人机认证，需要确保后续逻辑，再进入商品页面后再执行
-* */
-async function waitItemPageLoadFinish() {
+ * 等待商品开始抢购
+ */
+async function waitForProductStart() {
 	let button = null;
-	let count = 0;
-	const sleetSeconds = 1;
+	const sleepSeconds = 1;
+	let pageReload = false;
 
 	do {
 		if (page) {
 			try {
 				button = await page.$("#InitCartUrl");
 				if (button === null) {
-					await sleep(sleetSeconds * 1000);
-				}
-				count++;
-				if (count >= sleetSeconds * 120) {
-					count = 0;
-					// 刷新页面，解决页面倒计时不准确的问题
-					await page.reload();
+					await sleep(sleepSeconds * 1000);
+
+					if (!pageReload && ProductDetail && ProductDetail.auctionInfo) {
+						const waitMilliseconds = ProductDetail.auctionInfo.startTime - ProductDetail.currentTime;
+						// 等待商品开始抢购
+						await new Promise((resolve, reject) => {
+							WaitForProductStartTimer = setTimeout(function () {
+								resolve();
+							}, waitMilliseconds)
+						});
+						if (page) {
+							// 商品开始抢购时刷新页面，解决页面倒计时不准确，导致出价按钮更新不及时的问题
+							await page.reload();
+						}
+						pageReload = true;
+					}
 				}
 			} catch (error) {
 				consoleUtil.log(error);
 			}
-
 		}
 	} while (button === null && page && !page.isClosed());
 }
@@ -669,7 +684,7 @@ function requestOfferPrice(para) {
 				const parsedData = JSON.parse(rawData);
 				if (parsedData.result && parsedData.result.message) {
 					new Notification({ title: noticeTitle, body: parsedData.result.message }).show();
-					handleSendNotice(parsedData.result.message);
+					handleSendNotice(`${parsedData.result.message} — 当前出价：${price}`);
 				}
 				resolve();
 			});
@@ -849,17 +864,17 @@ function handleSendNotice(msg) {
 	【抢购通知】
 	通知内容：${msg}
 	商品ID：${Item_ID}
-	商品名称：${info.productName}
-	起拍价：${info.startPrice}
-	封顶价：${info.maxPrice}
-	抢购开始时间：${info.startTime && dayjs(info.startTime).format("YYYY-MM-DD HH:mm:ss")}
-	抢购结束时间：${info.endTime && dayjs(info.endTime).format("YYYY-MM-DD HH:mm:ss")}
+	商品名称：${info.productName || ''}
+	起拍价：${info.startPrice || ''}
+	封顶价：${info.maxPrice || ''}
+	抢购开始时间：${info.startTime ? dayjs(info.startTime).format("YYYY-MM-DD HH:mm:ss") : ''}
+	抢购结束时间：${info.endTime ? dayjs(info.endTime).format("YYYY-MM-DD HH:mm:ss") : ''}
 	设定最低价：${MinPrice || ''}
 	设定最高价：${MaxPrice || ''}
 	当前价格：${NowPrice || ''}
 	当前抢购人：${CurrentBidder || ''}
 	当前抢购人昵称：${BidderNickName || ''}
-	当前时间：${dayjs(CurrentTime).format('YYYY-MM-DD HH:mm:sss')}`);
+	当前时间：${dayjs(CurrentTime ? CurrentTime : undefined).format('YYYY-MM-DD HH:mm:ss')}`);
 }
 
 module.exports = { goToBid, updateBid, getBidDetail, searchProduct, goToProductPage };
