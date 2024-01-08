@@ -40,7 +40,7 @@ let isLogin = false;
 // 出价加价幅度
 let Markup = 2;
 // 最后出价倒数时间（毫秒）
-let LastBidCountdownTime = 300;
+let LastBidCountdownTime = 350;
 // 出价方式
 let BiddingMethod = Constants.BiddingMethod.ON_OTHERS_BID;
 const noticeTitle = "京东夺宝岛助手提示";
@@ -274,8 +274,12 @@ async function handleGoToTargetPage() {
 		return;
 	}
 
-	// 查询当前的价格和剩余时间
-	await getBatchInfo();
+	try {
+		// 查询当前的价格和剩余时间
+		await getBatchInfo();
+	} catch (error) {
+		consoleUtil.log("handleGoToTargetPage getBatchInfo error: ", error);
+	}
 
 	// 启用拦截器
 	await page.setRequestInterception(true).catch();
@@ -342,7 +346,7 @@ async function waitForProductStart() {
 							}, waitMilliseconds)
 						});
 						if (page) {
-							consoleUtil.log("page start reload");
+							consoleUtil.log("page start reload.", dayjs().format('YYYY-MM-DD HH:mm:ss'));
 							// 商品开始抢购时刷新页面，解决页面倒计时不准确，导致出价按钮更新不及时的问题
 							await page.reload();
 						}
@@ -393,6 +397,7 @@ function getBatchInfo(isLastQuery = false) {
 				const offsetTime = endTime - startTime;
 				// consoleUtil.log("getBatchInfo end endTime = ", endTime, " , offsetTime = ", offsetTime);
 				try {
+					consoleUtil.log("getBatchInfo on end rawData : ", rawData);
 					const parsedData = JSON.parse(rawData);
 					if (parsedData.result && parsedData.result.data && parsedData.result.data[Item_ID]) {
 						NowPrice = parsedData.result.data[Item_ID].currentPrice;
@@ -412,7 +417,7 @@ function getBatchInfo(isLastQuery = false) {
 						}
 					}
 				} catch (e) {
-					consoleUtil.error(e.message);
+					consoleUtil.error("getBatchInfo error: ", e.message);
 				}
 				resolve();
 			});
@@ -442,7 +447,11 @@ function refreshBatchInfo() {
 			return;
 		}
 		fetching = true;
-		await getBatchInfo();
+		try {
+			await getBatchInfo();
+		} catch (error) {
+			consoleUtil.log("refreshBatchInfo error: ", error);
+		}
 		fetching = false;
 	}, 10);
 }
@@ -586,7 +595,7 @@ function handlePriceAndTime(isFirstHandlePrice = false) {
 		try {
 			await getBatchInfo();
 		} catch (error) {
-			consoleUtil.log(error);
+			consoleUtil.log("cycleTimer error: ", error);
 		}
 		handlePriceAndTime();
 	}, NextRefreshTime)
