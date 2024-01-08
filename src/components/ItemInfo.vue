@@ -191,7 +191,7 @@ export default defineComponent({
         price: undefined,
         bidder: "",
         markup: 2,
-        lastBidCountdownTime: 300,
+        lastBidCountdownTime: 350,
         biddingMethod: Constants.BiddingMethod.ON_OTHERS_BID,
         minPrice: undefined,
       },
