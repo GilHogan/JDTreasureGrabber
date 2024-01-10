@@ -274,13 +274,22 @@ async function handleGoToTargetPage() {
 		return;
 	}
 
-	try {
-		// 可能由于服务端限流，请求结果有时为空。前面刷新页面也会发起相同的请求，这里等待一会儿再做查询
-		await sleep(1000);
-		// 查询当前的价格和剩余时间
-		await getBatchInfo();
-	} catch (error) {
-		consoleUtil.log("handleGoToTargetPage getBatchInfo error: ", error);
+	let getBatchInfoSuccess = false;
+	let getBatchInfoTimes = 0;
+	do {
+		getBatchInfoTimes++;
+		try {
+			// 可能由于服务端限流，请求结果有时为空。前面刷新页面也会发起相同的请求，这里等待一会儿再做查询
+			await sleep(1000);
+			// 查询当前的价格和剩余时间
+			await getBatchInfo();
+			getBatchInfoSuccess = true;
+		} catch (error) {
+			consoleUtil.log("handleGoToTargetPage getBatchInfo error: ", error);
+		}
+	} while (getBatchInfoTimes <= 3 && !getBatchInfoSuccess);
+
+	if (!getBatchInfoSuccess || !CurrentTime) {
 		consoleUtil.log("获取抢购信息失败，请检查");
 		new Notification({ title: noticeTitle, body: "获取抢购信息失败，请检查" }).show();
 		handleSendNotice(`获取抢购信息失败，请检查`);
