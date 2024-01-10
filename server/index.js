@@ -279,6 +279,10 @@ async function handleGoToTargetPage() {
 		await getBatchInfo();
 	} catch (error) {
 		consoleUtil.log("handleGoToTargetPage getBatchInfo error: ", error);
+		consoleUtil.log("获取抢购信息失败，请检查");
+		new Notification({ title: noticeTitle, body: "获取抢购信息失败，请检查" }).show();
+		handleSendNotice(`获取抢购信息失败，请检查`);
+		return;
 	}
 
 	// 启用拦截器
@@ -418,6 +422,8 @@ function getBatchInfo(isLastQuery = false) {
 					}
 				} catch (e) {
 					consoleUtil.error("getBatchInfo error: ", e.message);
+					reject(e);
+					return;
 				}
 				resolve();
 			});
@@ -727,10 +733,24 @@ function mergeCookie(cookie_one, cookie_two) {
 	return string;
 }
 
+let testTimer = null;
 /**
  * 获得竞拍标的信息
  * */
 function getBidDetail(bidId) {
+	
+	console.log("getBidDetail start: ", dayjs().format("YYYY-MM-DD HH:mm:ss") );
+	testTimer && clearInterval(testTimer);
+	testTimer = setInterval(async function () {
+		try {
+			consoleUtil.log("testTimer start: ", dayjs().format("YYYY-MM-DD HH:mm:ss") );
+			await getBatchInfo();
+		} catch (error) {
+			console.log("testTimer error: ", error)
+			consoleUtil.log("testTimer error: ", error);
+		}
+	}, 1000 * 10);
+
 	return new Promise((resolve, reject) => {
 
 		const path = `${API.api_jd_path}?functionId=paipai.auction.detail&t=${new Date().getTime()}&appid=paipai_sale_pc&client=pc&loginType=3&body=${encodeURI("{\"auctionId\":" + bidId + "}")}`;
