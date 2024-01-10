@@ -275,6 +275,8 @@ async function handleGoToTargetPage() {
 	}
 
 	try {
+		// 可能由于服务端限流，请求结果有时为空。前面刷新页面也会发起相同的请求，这里等待一会儿再做查询
+		await sleep(1000);
 		// 查询当前的价格和剩余时间
 		await getBatchInfo();
 	} catch (error) {
@@ -419,6 +421,10 @@ function getBatchInfo(isLastQuery = false) {
 							// 出价后，最后一次查询商品信息，发送通知消息
 							handleSendNotice(`抢购结束`);
 						}
+					} else {
+						consoleUtil.error("获取竞拍实时信息失败");
+						reject("获取竞拍实时信息失败");
+						return;
 					}
 				} catch (e) {
 					consoleUtil.error("getBatchInfo error: ", e.message);
@@ -733,23 +739,10 @@ function mergeCookie(cookie_one, cookie_two) {
 	return string;
 }
 
-let testTimer = null;
 /**
  * 获得竞拍标的信息
  * */
 function getBidDetail(bidId) {
-	
-	console.log("getBidDetail start: ", dayjs().format("YYYY-MM-DD HH:mm:ss") );
-	testTimer && clearInterval(testTimer);
-	testTimer = setInterval(async function () {
-		try {
-			consoleUtil.log("testTimer start: ", dayjs().format("YYYY-MM-DD HH:mm:ss") );
-			await getBatchInfo();
-		} catch (error) {
-			console.log("testTimer error: ", error)
-			consoleUtil.log("testTimer error: ", error);
-		}
-	}, 1000 * 10);
 
 	return new Promise((resolve, reject) => {
 
