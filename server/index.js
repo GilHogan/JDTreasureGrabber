@@ -289,7 +289,7 @@ async function handleGoToTargetPage() {
 		}
 	} while (getBatchInfoTimes <= 3 && !getBatchInfoSuccess);
 
-	if (!getBatchInfoSuccess || !CurrentTime) {
+	if (!getBatchInfoSuccess || !EndTime) {
 		consoleUtil.log("获取抢购信息失败，请检查");
 		new Notification({ title: noticeTitle, body: "获取抢购信息失败，请检查" }).show();
 		handleSendNotice(`获取抢购信息失败，请检查`);
