@@ -594,8 +594,8 @@ async function buyByAPI(price) {
  * 最后倒计时出价处理
  */
 async function handleLastMinuteBuy(time) {
-	if (RefreshBatchInfoTimer === undefined) {
-		// 刷新当前竞价信息
+	if (BiddingMethod !== Constants.BiddingMethod.ONE_TIME_BID && RefreshBatchInfoTimer === undefined) {
+		// 刷新当前竞价信息; 一口价出价方式不做刷新
 		refreshBatchInfo();
 	}
 
