@@ -182,7 +182,13 @@ export default defineComponent({
               if (data) {
                 // 有无商品调用接口不同，返回数据格式也不同
                 if (searchName) {
-                  dataMap.productSearchResult = data || {};
+                  if (data.itemList && data.itemList.length > 0) {
+                    // 根据开始时间重新排序
+                    data.itemList.sort((a, b) => {
+                      return a.startTime - b.startTime;
+                    });
+                  }
+                  dataMap.productSearchResult = data;
                 } else {
                   dataMap.productSearchResult = {
                     pageCount: Math.ceil(data.totalNumber / 20),
