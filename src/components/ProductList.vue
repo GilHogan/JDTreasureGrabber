@@ -115,7 +115,7 @@
 <script>
 import { defineComponent, reactive, computed, toRefs, onMounted } from "vue";
 const dayjs = require("dayjs");
-const API = require("../../server/api");
+const API = require("../../constant/constants").API;
 
 export default defineComponent({
   name: "ProductList",
@@ -220,6 +220,7 @@ export default defineComponent({
   cursor: pointer;
   color: #2f81f7;
 }
+
 .pagination-class {
   float: right;
 }
