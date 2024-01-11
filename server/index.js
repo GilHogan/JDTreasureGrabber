@@ -1,14 +1,14 @@
 const puppeteer = require('puppeteer-core');
 const findChrome = require('../node_modules/carlo/lib/find_chrome.js');
 const querystring = require("querystring");
-const https = require("https");
-const API = require("./api");
+const { postOfferPrice, fetchBatchInfo, fetchBidDetail, fetchProduct, loopRequestAvoidCurrentLimiting, sleep } = require("./api");
 const dayjs = require('dayjs');
 const { Notification } = require('electron');
 const Constants = require("../constant/constants");
 const consoleUtil = require('./utils/consoleLogUtil');
 const { sendNotice } = require('./utils/noticeUtil');
 const { getUserData, setUserDataProperty } = require('./utils/storeUtil');
+const API = Constants.API;
 
 // 商品的ID
 let Item_ID;
@@ -17,9 +17,6 @@ let Item_ID;
 let MaxPrice;
 // 最低价格
 let MinPrice;
-
-// 初始刷新频率
-let NextRefreshTime = 2000;
 
 let Item_URL;
 let OfferPricePara = null;
@@ -36,6 +33,7 @@ let Bidder;
 let CurrentBidder;
 let Browser;
 let CycleTimer;
+let CheckBidIsNearingEnd;
 let isLogin = false;
 // 出价加价幅度
 let Markup = 2;
@@ -232,6 +230,7 @@ function resetData() {
 	CurrentTime = null;
 	RefreshBatchInfoTimer && clearInterval(RefreshBatchInfoTimer);
 	CycleTimer && clearTimeout(CycleTimer);
+	CheckBidIsNearingEnd && clearTimeout(CheckBidIsNearingEnd);
 	OfferPriceTimer && clearTimeout(OfferPriceTimer);
 	BiddingMethod = Constants.BiddingMethod.ON_OTHERS_BID;
 	ProductDetail = null;
@@ -259,40 +258,33 @@ async function handleGoToTargetPage() {
 	setUserDataProperty(Constants.StoreKeys.COOKIES_KEY, page_cookie);
 
 	// 查询商品详情
-	ProductDetail = await getBidDetail(Item_ID);
+	ProductDetail = await loopRequestAvoidCurrentLimiting(() => getBidDetail(Item_ID));
 	if (!ProductDetail || !ProductDetail.auctionInfo || !ProductDetail.auctionInfo.startTime || !ProductDetail.currentTime) {
 		consoleUtil.log("商品详情获取失败，请检查");
 		new Notification({ title: noticeTitle, body: "商品详情获取失败，请检查" }).show();
 		handleSendNotice(`商品详情获取失败，请检查`);
+		resetData();
 		return;
 	}
 
-	consoleUtil.log("等待商品开始抢购")
+	// 检查商品抢购是否接近尾声
+	checkBidIsNearingEnd();
+
+	// 等待商品开始抢购
 	await waitForProductStart();
 	if (!page || page.isClosed()) {
 		// 页面关闭，则退出
+		resetData();
 		return;
 	}
 
-	let getBatchInfoSuccess = false;
-	let getBatchInfoTimes = 0;
-	do {
-		getBatchInfoTimes++;
-		try {
-			// 可能由于服务端限流，请求结果有时为空。前面刷新页面也会发起相同的请求，这里等待一会儿再做查询
-			await sleep(1000);
-			// 查询当前的价格和剩余时间
-			await getBatchInfo();
-			getBatchInfoSuccess = true;
-		} catch (error) {
-			consoleUtil.log("handleGoToTargetPage getBatchInfo error: ", error);
-		}
-	} while (getBatchInfoTimes <= 3 && !getBatchInfoSuccess);
-
-	if (!getBatchInfoSuccess || !EndTime) {
+	// 避免服务端限流循环获取竞拍实时信息
+	const isGetBatchInfoSuccess = await loopRequestAvoidCurrentLimiting(getBatchInfo);
+	if (!isGetBatchInfoSuccess || !EndTime) {
 		consoleUtil.log("获取抢购信息失败，请检查");
 		new Notification({ title: noticeTitle, body: "获取抢购信息失败，请检查" }).show();
 		handleSendNotice(`获取抢购信息失败，请检查`);
+		resetData();
 		return;
 	}
 
@@ -341,6 +333,7 @@ async function handleGoToTargetPage() {
  * 等待商品开始抢购
  */
 async function waitForProductStart() {
+	consoleUtil.log("等待商品开始抢购 ", dayjs().format('YYYY-MM-DD HH:mm:ss'));
 	let button = null;
 	const sleepSeconds = 1;
 	let pageReload = false;
@@ -369,95 +362,71 @@ async function waitForProductStart() {
 					}
 				}
 			} catch (error) {
-				consoleUtil.log(error);
+				consoleUtil.log("waitForProductStart error:", error.message);
 			}
 		}
 	} while (button === null && page && !page.isClosed());
 }
 
+/**
+ * 检查商品抢购是否接近尾声
+ */
+function checkBidIsNearingEnd() {
+	// 提前结束等待，开始后续的倒计时出价处理
+	const waitMilliseconds = ProductDetail.auctionInfo.actualEndTime - ProductDetail.currentTime - 5000;
+	consoleUtil.log("checkBidIsNearingEnd waitMilliseconds =", waitMilliseconds)
+	CheckBidIsNearingEnd = setTimeout(async () => {
+		consoleUtil.log("商品抢购已接近尾声，开始倒计时抢购处理 ", dayjs().format('YYYY-MM-DD HH:mm:ss'));
+		// 结束循环竞拍实时信息查询
+		CycleTimer && clearTimeout(CycleTimer);
+		try {
+			await getBatchInfo();
+		} catch (error) {
+			consoleUtil.log("checkBidIsNearingEnd error: ", error.message);
+		}
+		// 执行最后的倒计时出价处理
+		handlePriceAndTime(false, true);
+	}, waitMilliseconds);
+}
 
 /**
  * 获得竞拍实时信息
  * */
 function getBatchInfo(isLastQuery = false) {
-	return new Promise((resolve, reject) => {
 
-		const path = `${API.api_jd_path}?functionId=paipai.auction.current_bid_info&t=${new Date().getTime()}&appid=paipai_sale_pc&client=pc&loginType=3&body=${encodeURI("{\"auctionId\":" + Item_ID + "}")}`;
-
+	return new Promise(async (resolve, reject) => {
 		const startTime = new Date().getTime();
-		// consoleUtil.log("getBatchInfo start 当前时间：" + dayjs(startTime).format('YYYY-MM-DD HH:mm:sss'), startTime)
-
-		const options = {
-			hostname: API.api_jd_hostname,
-			port: 443,
-			path: path,
-			method: "GET",
-			headers: {
-				"referer": API.web_api_header_referer
-			}
-		};
-
-		const req = https.request(options, (res) => {
-			let rawData = "";
-			// consoleUtil.log("getBatchInfo get res = ", res)
-
-			res.setEncoding('utf8');
-
-			res.on('data', (chunk) => {
-				rawData += chunk;
-			});
-
-			res.on('end', () => {
-				const endTime = new Date().getTime();
-				const offsetTime = endTime - startTime;
-				// consoleUtil.log("getBatchInfo end endTime = ", endTime, " , offsetTime = ", offsetTime);
-				try {
-					consoleUtil.log("getBatchInfo on end rawData : ", rawData);
-					const parsedData = JSON.parse(rawData);
-					if (parsedData.result && parsedData.result.data && parsedData.result.data[Item_ID]) {
-						NowPrice = parsedData.result.data[Item_ID].currentPrice;
-						EndTime = parsedData.result.data[Item_ID].actualEndTime;
-						CurrentTime = parsedData.result.list[0];
-						// consoleUtil.log("getBatchInfo end origin CurrentTime = ", CurrentTime);
-						// 假定服务器的当前时间是接口获取到的时间加上请求耗时
-						CurrentTime = CurrentTime + offsetTime;
-						CurrentBidder = parsedData.result.data[Item_ID].currentBidder;
-						BidderNickName = parsedData.result.data[Item_ID].bidderNickName;
-						consoleUtil.log("getBatchInfo get end NowPrice = ", NowPrice, ", CurrentTime = ", CurrentTime, ", EndTime = ", EndTime,
-							", CurrentTime format = ", dayjs(CurrentTime).format('YYYY-MM-DD HH:mm:sss'), ", EndTime format = ", dayjs(EndTime).format('YYYY-MM-DD HH:mm:sss'),
-							", CurrentBidder = ", CurrentBidder, ", BidderNickName = ", BidderNickName);
-						if (isLastQuery) {
-							// 出价后，最后一次查询商品信息，发送通知消息
-							handleSendNotice(`抢购结束`);
-						}
-					} else {
-						consoleUtil.error("获取竞拍实时信息失败");
-						reject("获取竞拍实时信息失败");
-						return;
-					}
-				} catch (e) {
-					consoleUtil.error("getBatchInfo error: ", e.message);
-					reject(e);
-					return;
+		try {
+			const result = await fetchBatchInfo(Item_ID);
+			const endTime = new Date().getTime();
+			const offsetTime = endTime - startTime;
+			if (result && result.data && result.data[Item_ID]) {
+				NowPrice = result.data[Item_ID].currentPrice;
+				EndTime = result.data[Item_ID].actualEndTime;
+				CurrentTime = result.list[0];
+				// consoleUtil.log("getBatchInfo end origin CurrentTime = ", CurrentTime);
+				// 假定服务器的当前时间是接口获取到的时间加上请求耗时
+				CurrentTime = CurrentTime + offsetTime;
+				CurrentBidder = result.data[Item_ID].currentBidder;
+				BidderNickName = result.data[Item_ID].bidderNickName;
+				consoleUtil.log("getBatchInfo get end NowPrice = ", NowPrice, ", CurrentTime = ", CurrentTime, ", EndTime = ", EndTime,
+					", CurrentTime format = ", dayjs(CurrentTime).format('YYYY-MM-DD HH:mm:sss'), ", EndTime format = ", dayjs(EndTime).format('YYYY-MM-DD HH:mm:sss'),
+					", CurrentBidder = ", CurrentBidder, ", BidderNickName = ", BidderNickName);
+				if (isLastQuery) {
+					// 出价后，最后一次查询商品信息，发送通知消息
+					handleSendNotice(`抢购结束`);
 				}
-				resolve();
-			});
-		});
-
-		req.on('error', (e) => {
-			consoleUtil.error(`请求遇到问题: ${e.message}`);
+			} else {
+				consoleUtil.error("获取竞拍实时信息失败");
+				reject(new Error("获取竞拍实时信息失败"));
+				return;
+			}
+		} catch (e) {
+			consoleUtil.error("getBatchInfo error: ", e.message);
 			reject(e);
-		});
-
-		req.end();
-	});
-}
-
-function sleep(milliseconds = 10) {
-	return new Promise((resolve, reject) => {
-		setTimeout(function () {
-			resolve();
-		}, milliseconds)
+			return;
+		}
+		resolve();
 	});
 }
 
@@ -471,7 +440,7 @@ function refreshBatchInfo() {
 		try {
 			await getBatchInfo();
 		} catch (error) {
-			consoleUtil.log("refreshBatchInfo error: ", error);
+			consoleUtil.log("refreshBatchInfo error: ", error.message);
 		}
 		fetching = false;
 	}, 10);
@@ -479,10 +448,9 @@ function refreshBatchInfo() {
 
 /**
  * 根据当前的出价和剩余时间做处理
- * 若剩余时间大于3s，每2s刷新一次，小于3s，就100ms刷新一次
  * 执行购买逻辑
  * */
-function handlePriceAndTime(isFirstHandlePrice = false) {
+function handlePriceAndTime(isFirstHandlePrice = false, isLastHandlePrice = false) {
 
 	const price = NowPrice || 1;
 	const currentLocalTime = new Date().getTime();
@@ -511,6 +479,7 @@ function handlePriceAndTime(isFirstHandlePrice = false) {
 			RefreshBatchInfoTimer && clearInterval(RefreshBatchInfoTimer);
 			new Notification({ title: noticeTitle, body: "设定的最高价格低于商品起拍价，抢购结束" }).show();
 			handleSendNotice(`设定的最高价格低于商品起拍价，抢购结束`);
+			CheckBidIsNearingEnd && clearTimeout(CheckBidIsNearingEnd);
 			return;
 		}
 	}
@@ -532,6 +501,7 @@ function handlePriceAndTime(isFirstHandlePrice = false) {
 		RefreshBatchInfoTimer && clearInterval(RefreshBatchInfoTimer);
 		new Notification({ title: noticeTitle, body: "超过最高价格，抢购结束" }).show();
 		handleSendNotice(`超过最高价格，抢购结束`);
+		CheckBidIsNearingEnd && clearTimeout(CheckBidIsNearingEnd);
 		return;
 	}
 
@@ -540,6 +510,7 @@ function handlePriceAndTime(isFirstHandlePrice = false) {
 		clearInterval(RefreshBatchInfoTimer);
 		new Notification({ title: noticeTitle, body: "抢购时间结束" }).show();
 		handleSendNotice(`抢购时间结束`);
+		CheckBidIsNearingEnd && clearTimeout(CheckBidIsNearingEnd);
 		return;
 	}
 
@@ -549,66 +520,9 @@ function handlePriceAndTime(isFirstHandlePrice = false) {
 		handleSendNotice(`抢购开始`);
 	}
 
-	if (time < 5000) {
-		if (RefreshBatchInfoTimer === undefined) {
-			// 刷新当前竞价信息
-			refreshBatchInfo();
-		}
-
-		let bidTime = time - LastBidCountdownTime;
-		bidTime <= 0 ? time - 100 : bidTime;
-		consoleUtil.log(`${bidTime}毫秒后开始出价`);
-
-		if (OfferPriceTimer) clearTimeout(OfferPriceTimer);
-
-		OfferPriceTimer = setTimeout(async function () {
-			try {
-				let bidPrice;
-				let isAboveMaxPrice = false;
-				if (BiddingMethod == Constants.BiddingMethod.ONE_TIME_BID) {
-					// 固定价格的处理方式
-					bidPrice = MaxPrice;
-					if (MaxPrice && (NowPrice >= MaxPrice)) {
-						isAboveMaxPrice = true;
-					}
-				} else {
-					// 加价的处理方式
-					bidPrice = (NowPrice || 1) + Markup;
-
-					if (BiddingMethod == Constants.BiddingMethod.WITHIN_PRICE_RANGE) {
-						if (MinPrice && bidPrice < MinPrice) {
-							// 当前出价小于最小出价额，则以最小出价额进行出价
-							bidPrice = MinPrice
-						}
-					}
-
-					if (bidPrice > MaxPrice && (NowPrice || 1) < MaxPrice) {
-						// 当前出价加上出价幅度大于最大价格，并且当前出价小于最大价格时，使用最大价格进行购买
-						bidPrice = MaxPrice;
-					}
-					if (MaxPrice && (bidPrice > MaxPrice)) {
-						isAboveMaxPrice = true;
-					}
-				}
-
-				const currentRemainTime = EndTime - CurrentTime;
-				consoleUtil.log(`${bidTime}毫秒后出价:${bidPrice}元，当前时间：${new Date().getTime()}, 上一次请求竞价信息后的剩余时间：${currentRemainTime}`);
-				RefreshBatchInfoTimer && clearInterval(RefreshBatchInfoTimer);
-				if (isAboveMaxPrice) {
-					consoleUtil.log("超过最高价格，抢购结束");
-					new Notification({ title: noticeTitle, body: "超过最高价格，抢购结束" }).show();
-					handleSendNotice(`超过最高价格，抢购结束`);
-				} else {
-					consoleUtil.log(new Date().getTime() + ":" + `出价${bidPrice}`);
-					await buyByAPI(bidPrice);
-				}
-				await sleep(currentRemainTime + 1000);
-				// 最后再获取商品信息，查看竞拍结果
-				getBatchInfo(true);
-			} catch (error) {
-				consoleUtil.log(error);
-			}
-		}, bidTime);
+	if (isLastHandlePrice) {
+		// 最后倒计时出价处理
+		handleLastMinuteBuy(time);
 		return;
 	}
 
@@ -616,10 +530,10 @@ function handlePriceAndTime(isFirstHandlePrice = false) {
 		try {
 			await getBatchInfo();
 		} catch (error) {
-			consoleUtil.log("cycleTimer error: ", error);
+			consoleUtil.log("cycleTimer error: ", error.message);
 		}
 		handlePriceAndTime();
-	}, NextRefreshTime)
+	}, 1000 * 60 * 4.5)
 }
 
 /**
@@ -637,9 +551,9 @@ async function buyByPage(price) {
 	await page.keyboard.press('Backspace');
 	await page.keyboard.type(price.toString());
 	try {
-		await page.click("#InitCartUrl").catch();
+		await page.click("#InitCartUrl");
 	} catch (e) {
-		consoleUtil.log("buyByPage error: ", e)
+		consoleUtil.log("buyByPage error: ", e.message)
 	}
 }
 
@@ -663,68 +577,82 @@ async function buyByAPI(price) {
 		OfferPricePara.price = price;
 
 		consoleUtil.log(`出价：${price}元`)
-		return requestOfferPrice({
-			functionId: API.offer_price_function_id,
-			body: OfferPricePara
-		});
+		try {
+			// 发出出价的请求
+			const result = await postOfferPrice({ functionId: API.offer_price_function_id, body: OfferPricePara }, CurrentTime, Cookie);
+			if (result && result.message) {
+				new Notification({ title: noticeTitle, body: result.message }).show();
+				handleSendNotice(`${result.message} — 当前出价：${price}`);
+			}
+		} catch (e) {
+			consoleUtil.error("buyByAPI error: ", e.message);
+		}
 	}
 }
 
 /**
- * 发出出价的请求
- * */
-function requestOfferPrice(para) {
-	return new Promise((resolve, reject) => {
-		const price = para.body.price;
-		para.body = JSON.stringify(para.body);
-		let postData = querystring.stringify(para);
+ * 最后倒计时出价处理
+ */
+async function handleLastMinuteBuy(time) {
+	if (RefreshBatchInfoTimer === undefined) {
+		// 刷新当前竞价信息
+		refreshBatchInfo();
+	}
 
-		let path = `${API.api_jd_path}?t=${CurrentTime}&appid=paipai_sale_pc`;
+	let bidTime = time - LastBidCountdownTime;
+	bidTime <= 0 ? time - 100 : bidTime;
+	consoleUtil.log(`${bidTime}毫秒后开始出价`);
 
-		consoleUtil.log("requestOfferPrice start 出价 = ", price, " , 当前时间：", dayjs().format('YYYY-MM-DD HH:mm:sss'), new Date().getTime());
+	OfferPriceTimer && clearTimeout(OfferPriceTimer);
 
-		const options = {
-			hostname: API.api_jd_hostname,
-			port: 443,
-			path: path,
-			method: "POST",
-			headers: {
-				"Content-Type": 'application/x-www-form-urlencoded',
-				"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36",
-				"cookie": Cookie,
-				"referer": API.web_api_header_referer,
-				"sec-fetch-mode": "cors"
-			}
-		};
-
-		const req = https.request(options, (res) => {
-			let rawData = "";
-
-			res.setEncoding('utf8');
-
-			res.on('data', (chunk) => {
-				rawData += chunk;
-			});
-
-			res.on('end', () => {
-				consoleUtil.log("requestOfferPrice end 出价:", price, ", 当前时间：", dayjs().format('YYYY-MM-DD HH:mm:sss'), new Date().getTime(), " , 结果:" + rawData);
-				const parsedData = JSON.parse(rawData);
-				if (parsedData.result && parsedData.result.message) {
-					new Notification({ title: noticeTitle, body: parsedData.result.message }).show();
-					handleSendNotice(`${parsedData.result.message} — 当前出价：${price}`);
+	OfferPriceTimer = setTimeout(async function () {
+		try {
+			let bidPrice;
+			let isAboveMaxPrice = false;
+			if (BiddingMethod == Constants.BiddingMethod.ONE_TIME_BID) {
+				// 固定价格的处理方式
+				bidPrice = MaxPrice;
+				if (MaxPrice && (NowPrice >= MaxPrice)) {
+					isAboveMaxPrice = true;
 				}
-				resolve();
-			});
-		});
+			} else {
+				// 加价的处理方式
+				bidPrice = (NowPrice || 1) + Markup;
 
-		req.on('error', (e) => {
-			consoleUtil.error(`requestOfferPrice 请求遇到问题: ${e.message}`);
-			reject(e);
-		});
+				if (BiddingMethod == Constants.BiddingMethod.WITHIN_PRICE_RANGE) {
+					if (MinPrice && bidPrice < MinPrice) {
+						// 当前出价小于最小出价额，则以最小出价额进行出价
+						bidPrice = MinPrice
+					}
+				}
 
-		req.write(postData);
-		req.end();
-	});
+				if (bidPrice > MaxPrice && (NowPrice || 1) < MaxPrice) {
+					// 当前出价加上出价幅度大于最大价格，并且当前出价小于最大价格时，使用最大价格进行购买
+					bidPrice = MaxPrice;
+				}
+				if (MaxPrice && (bidPrice > MaxPrice)) {
+					isAboveMaxPrice = true;
+				}
+			}
+
+			const currentRemainTime = EndTime - CurrentTime;
+			consoleUtil.log(`${bidTime}毫秒后出价:${bidPrice}元，当前时间：${new Date().getTime()}, 上一次请求竞价信息后的剩余时间：${currentRemainTime}`);
+			RefreshBatchInfoTimer && clearInterval(RefreshBatchInfoTimer);
+			if (isAboveMaxPrice) {
+				consoleUtil.log("超过最高价格，抢购结束");
+				new Notification({ title: noticeTitle, body: "超过最高价格，抢购结束" }).show();
+				handleSendNotice(`超过最高价格，抢购结束`);
+			} else {
+				consoleUtil.log(new Date().getTime() + ":" + `出价${bidPrice}`);
+				await buyByAPI(bidPrice);
+			}
+			await sleep(currentRemainTime + 1000);
+			// 最后再获取商品信息，查看竞拍结果
+			getBatchInfo(true);
+		} catch (error) {
+			consoleUtil.log("handleLastMinuteBuy error:", error.message);
+		}
+	}, bidTime);
 }
 
 /**
@@ -751,125 +679,28 @@ function mergeCookie(cookie_one, cookie_two) {
 /**
  * 获得竞拍标的信息
  * */
-function getBidDetail(bidId) {
-
-	return new Promise((resolve, reject) => {
-
-		const path = `${API.api_jd_path}?functionId=paipai.auction.detail&t=${new Date().getTime()}&appid=paipai_sale_pc&client=pc&loginType=3&body=${encodeURI("{\"auctionId\":" + bidId + "}")}`;
-		const options = {
-			hostname: API.api_jd_hostname,
-			port: 443,
-			path: path,
-			method: "GET",
-			headers: {
-				"referer": API.web_api_header_referer
-			}
-		};
-
-		const req = https.request(options, (res) => {
-			let rawData = "";
-
-			res.setEncoding('utf8');
-
-			res.on('data', (chunk) => {
-				rawData += chunk;
-			});
-
-			res.on('end', () => {
-				let data = null;
-				// consoleUtil.log("getBidDetail *end rawData = ", rawData);
-
-				try {
-					const parsedData = JSON.parse(rawData);
-					if (parsedData.result && parsedData.result.data) {
-						data = parsedData.result.data;
-					}
-				} catch (e) {
-					consoleUtil.error(e.message);
-				}
-				resolve(data);
-			});
-		});
-
-		req.on('error', (e) => {
-			consoleUtil.error(`getBidDetail 请求遇到问题: ${e.message}`);
-			reject(e);
-		});
-
-		req.end();
-	});
+async function getBidDetail(bidId) {
+	let data = null;
+	try {
+		data = await fetchBidDetail(bidId);
+	} catch (e) {
+		consoleUtil.error("getBidDetail error:", e.message);
+	}
+	return data;
 }
 
 /**
  * 搜索产品
  * status: ""：全部，1：即将开始，2：正在进行
  * */
-function searchProduct(params = {}) {
-	const { name, pageNo = 1, status = "" } = params;
-	return new Promise((resolve, reject) => {
-
-		// consoleUtil.log("searchProduct name = ", name, " , pageNo = ", pageNo, " , status = ", status);
-
-		let path, params;
-		if (name) {
-			path = `${API.api_jd_path}?functionId=pp.dbd.biz.search.query&t=${new Date().getTime()}&appid=paipai_h5`;
-			params = { pageNo: pageNo, pageSize: 20, key: name, status: status, sort: "endTime_asc", specialType: 1, mpSource: 1, sourceTag: 2 };
-		} else {
-			path = `${API.api_jd_path}?functionId=dbd.auction.list.v2&t=${new Date().getTime()}&appid=paipai_h5`;
-			params = { pageNo: pageNo, pageSize: 20, key: name, status: status, auctionFilterTime: 180, isPersonalRecommend: 0, p: 2, skuGroup: 1, mpSource: 1, sourceTag: 2 };
-		}
-
-		const options = {
-			hostname: API.api_jd_hostname,
-			port: 443,
-			path: path,
-			method: "POST",
-			headers: {
-				"Content-Type": 'application/x-www-form-urlencoded',
-				"User-Agent": "jdapp;android;12.0.2;;;M/5.0;appBuild/98787;ef/1;ep/%7B%22hdid%22%3A%22JM9F1ywUPwflvMIpYPok0tt5k9kW4ArJEU3lfLhxBqw%3D%22%2C%22ts%22%3A1685444654944%2C%22ridx%22%3A-1%2C%22cipher%22%3A%7B%22sv%22%3A%22CJC%3D%22%2C%22ad%22%3A%22CtG3YtCyDtc3EJCmC2OyYm%3D%3D%22%2C%22od%22%3A%22CzY5ZJU0CQU3C2OyEJvwYq%3D%3D%22%2C%22ov%22%3A%22CzC%3D%22%2C%22ud%22%3A%22CtG3YtCyDtc3EJCmC2OyYm%3D%3D%22%7D%2C%22ciphertype%22%3A5%2C%22version%22%3A%221.2.0%22%2C%22appname%22%3A%22com.jingdong.app.mall%22%7D;jdSupportDarkMode/0;Mozilla/5.0 (Linux; Android 13; MI 8 Build/TKQ1.220905.001; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/89.0.4389.72 MQQBrowser/6.2 TBS/046247 Mobile Safari/537.36",
-				"Referer": API.app_api_header_referer,
-				"Sec-Fetch-Mode": "cors"
-			}
-		};
-
-		const bodyParams = {};
-		// data的encode方式有点奇怪
-		bodyParams.body = JSON.stringify(params);
-		const postData = querystring.stringify(bodyParams);
-
-		const req = https.request(options, (res) => {
-			let rawData = "";
-
-			res.setEncoding('utf8');
-
-			res.on('data', (chunk) => {
-				rawData += chunk;
-			});
-
-			res.on('end', () => {
-				let data = null;
-				try {
-					if (rawData) {
-						const parsedData = JSON.parse(rawData);
-						if (parsedData.result && parsedData.result.data) {
-							data = parsedData.result.data;
-						}
-					}
-				} catch (e) {
-					consoleUtil.error(e.message);
-				}
-				resolve(data);
-			});
-		});
-
-		req.on('error', (e) => {
-			consoleUtil.error(`searchProduct 请求遇到问题: ${e.message}`);
-			reject(e);
-		});
-
-		req.write(postData);
-		req.end();
-	});
+async function searchProduct(params = {}) {
+	let data = null;
+	try {
+		data = await fetchProduct(params);
+	} catch (e) {
+		consoleUtil.error("searchProduct error:", e.message);
+	}
+	return data;
 }
 
 /**
