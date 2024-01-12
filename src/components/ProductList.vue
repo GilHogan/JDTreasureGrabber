@@ -3,21 +3,11 @@
     <div class="app-title">商品搜索</div>
     <el-row style="margin: 5px 0">
       <el-col :span="4">
-        <el-input
-          size="small"
-          placeholder="搜索你想要的商品"
-          v-model="productName"
-          @keyup.enter="search"
-        />
+        <el-input size="small" placeholder="搜索你想要的商品" v-model="productName" @keyup.enter="search" />
       </el-col>
       <el-col :span="3" style="margin: 0 5px">
         <el-select size="small" v-model="status" placeholder="请选择商品状态">
-          <el-option
-            v-for="item in options"
-            :key="item.value"
-            :label="item.label"
-            :value="item.value"
-          >
+          <el-option v-for="item in options" :key="item.value" :label="item.label" :value="item.value">
           </el-option>
         </el-select>
       </el-col>
@@ -25,22 +15,12 @@
         <el-button size="small" type="primary" @click="search">搜索</el-button>
       </el-col>
     </el-row>
-    <el-table
-      ref="tableRef"
-      :data="productSearchResult.itemList || []"
-      border
-      max-height="500"
-      size="small"
-      v-loading="tableLoading"
-    >
+    <el-table ref="tableRef" :data="productSearchResult.itemList || []" border max-height="500" size="small"
+      v-loading="tableLoading">
       <el-table-column type="index" label="#" width="50"></el-table-column>
       <el-table-column prop="id" label="id" width="100">
         <template #default="scope">
-          <el-tooltip
-            content="设为当前抢购商品，并查看详情"
-            placement="top"
-            :hide-after="0"
-          >
+          <el-tooltip content="设为当前抢购商品，并查看详情" placement="top" :hide-after="0">
             <span class="product-link" @click="searchItemInfo(scope.row.id)">{{
               scope.row.id
             }}</span>
@@ -50,11 +30,7 @@
       <el-table-column prop="productName" label="名称" width="350">
         <template #default="scope">
           <el-tooltip content="在浏览器中查看" placement="top" :hide-after="0">
-            <span
-              class="product-link"
-              @click="handleGoToProductPage(scope.row.id)"
-              >{{ scope.row.productName }}</span
-            >
+            <span class="product-link" @click="handleGoToProductPage(scope.row.id)">{{ scope.row.productName }}</span>
           </el-tooltip>
         </template>
       </el-table-column>
@@ -71,8 +47,8 @@
         <template #default="scope">
           <span>{{
             scope.row.status == 1
-              ? "即将开始"
-              : scope.row.status == 2
+            ? "即将开始"
+            : scope.row.status == 2
               ? "正在进行"
               : ""
           }}</span>
@@ -83,14 +59,9 @@
       <el-table-column prop="primaryPic" label="封面" width="120">
         <template #default="scope">
           <el-tooltip content="点击预览" placement="top" :hide-after="0">
-            <el-image
-              style="width: 100px; height: 100px"
-              :src="imageUrl(scope.row.primaryPic)"
-              :preview-src-list="[previewUrl(scope.row.primaryPic)]"
-              :z-index="999"
-              :preview-teleported="true"
-              :lazy="false"
-            >
+            <el-image style="width: 100px; height: 100px" :src="imageUrl(scope.row.primaryPic)"
+              :preview-src-list="[previewUrl(scope.row.primaryPic)]" :z-index="999" :preview-teleported="true"
+              :lazy="false">
             </el-image>
           </el-tooltip>
         </template>
@@ -100,15 +71,9 @@
       <el-table-column prop="currentPrice" label="当前价"></el-table-column>
       <!-- <el-table-column prop="spectatorCount" label="围观数"> </el-table-column> -->
     </el-table>
-    <el-pagination
-      layout="prev, pager, next, jumper"
-      :page-count="productSearchResult.pageCount"
-      :page-size="20"
-      :current-page="productSearchResult.pageNo"
-      @current-change="fetchProduct"
-      :total="productSearchResult.count"
-      class="pagination-class"
-    />
+    <el-pagination layout="prev, pager, next, jumper" :page-count="productSearchResult.pageCount" :page-size="20"
+      :current-page="productSearchResult.pageNo" @current-change="fetchProduct" :total="productSearchResult.count"
+      class="pagination-class" />
   </div>
 </template>
 
