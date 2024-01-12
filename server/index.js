@@ -372,8 +372,12 @@ async function waitForProductStart() {
  * 检查商品抢购是否接近尾声
  */
 function checkBidIsNearingEnd() {
+	let baseOffsetTime = 5000;
+	if (baseOffsetTime <= LastBidCountdownTime) {
+		baseOffsetTime = baseOffsetTime + LastBidCountdownTime;
+	}
 	// 提前结束等待，开始后续的倒计时出价处理
-	const waitMilliseconds = ProductDetail.auctionInfo.actualEndTime - ProductDetail.currentTime - 5000;
+	const waitMilliseconds = ProductDetail.auctionInfo.actualEndTime - ProductDetail.currentTime - baseOffsetTime;
 	consoleUtil.log("checkBidIsNearingEnd waitMilliseconds =", waitMilliseconds)
 	CheckBidIsNearingEnd = setTimeout(async () => {
 		consoleUtil.log("商品抢购已接近尾声，开始倒计时抢购处理 ", dayjs().format('YYYY-MM-DD HH:mm:ss'));
@@ -392,7 +396,7 @@ function checkBidIsNearingEnd() {
 /**
  * 获得竞拍实时信息
  * */
-function getBatchInfo(isLastQuery = false) {
+function getBatchInfo() {
 
 	return new Promise(async (resolve, reject) => {
 		const startTime = new Date().getTime();
@@ -412,10 +416,6 @@ function getBatchInfo(isLastQuery = false) {
 				consoleUtil.log("getBatchInfo get end NowPrice = ", NowPrice, ", CurrentTime = ", CurrentTime, ", EndTime = ", EndTime,
 					", CurrentTime format = ", dayjs(CurrentTime).format('YYYY-MM-DD HH:mm:sss'), ", EndTime format = ", dayjs(EndTime).format('YYYY-MM-DD HH:mm:sss'),
 					", CurrentBidder = ", CurrentBidder, ", BidderNickName = ", BidderNickName, ", offsetTime = ", LastGetBatchInfoOffsetTime);
-				if (isLastQuery) {
-					// 出价后，最后一次查询商品信息，发送通知消息
-					handleSendNotice(`抢购结束`);
-				}
 			} else {
 				consoleUtil.error("获取竞拍实时信息失败");
 				reject(new Error("获取竞拍实时信息失败"));
@@ -488,9 +488,9 @@ function handlePriceAndTime(isFirstHandlePrice = false, isLastHandlePrice = fals
 	}
 
 	if (time < 0) {
-		consoleUtil.log("抢购时间结束");
-		new Notification({ title: noticeTitle, body: "抢购时间结束" }).show();
-		handleSendNotice(`抢购时间结束`);
+		consoleUtil.log("夺宝已结束-未出价");
+		new Notification({ title: noticeTitle, body: "夺宝已结束-未出价" }).show();
+		handleSendNotice(`夺宝已结束-未出价`);
 		CheckBidIsNearingEnd && clearTimeout(CheckBidIsNearingEnd);
 		return;
 	}
@@ -629,7 +629,10 @@ async function handleLastMinuteBuy(time) {
 			}
 			await sleep(currentRemainTime + 1000);
 			// 最后再获取商品信息，查看竞拍结果
-			getBatchInfo(true);
+			getBatchInfo().then(() => {
+				// 出价后，最后一次查询商品信息，发送通知消息
+				handleSendNotice(`夺宝已结束-已出价`);
+			}).catch();
 		} catch (error) {
 			consoleUtil.log("handleLastMinuteBuy error:", error.message);
 		}
