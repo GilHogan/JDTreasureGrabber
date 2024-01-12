@@ -1,10 +1,13 @@
+// 出价方式
+const BiddingMethod = {
+    ON_OTHERS_BID: 1, // 自动加价
+    WITHIN_PRICE_RANGE: 2, // 在价格区间内加价
+    ONE_TIME_BID: 3, // 一口价
+}
+
 module.exports = {
     // 出价方式
-    BiddingMethod: {
-        ON_OTHERS_BID: 1, // 自动加价
-        WITHIN_PRICE_RANGE: 2, // 在价格区间内加价
-        ONE_TIME_BID: 3, // 一口价
-    },
+    BiddingMethod: BiddingMethod,
     // 存储数据的键
     StoreKeys: {
         COOKIES_KEY: "cookies",
@@ -24,5 +27,19 @@ module.exports = {
         image_url: "https://img10.360buyimg.com/",
         get_js_token_url: "https://gia.jd.com/jsTk.do",
         get_user_info_url: "https://used-api.jd.com/common/user/info",
-    }
+    },
+    BiddingMethodOptions: [
+        {
+            value: BiddingMethod.ON_OTHERS_BID,
+            label: "自动加价",
+        },
+        {
+            value: BiddingMethod.WITHIN_PRICE_RANGE,
+            label: "价格区间内加价",
+        },
+        {
+            value: BiddingMethod.ONE_TIME_BID,
+            label: "一口价",
+        },
+    ],
 }

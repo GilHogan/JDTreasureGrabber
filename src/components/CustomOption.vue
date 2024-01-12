@@ -1,24 +1,49 @@
-
 <template>
-  <el-form label-width="100px">
+  <el-form label-width="135px">
     <el-form-item label="主题">
-      <el-switch
-        v-model="isDark"
-        inline-prompt
-        @change="toggleDark"
-        active-text="暗黑"
-        inactive-text="明亮"
-      ></el-switch>
+      <el-switch v-model="isDark" inline-prompt @change="toggleDark" active-text="暗黑" inactive-text="明亮"></el-switch>
     </el-form-item>
-    <el-form-item label="Http代理">
+    <el-form-item label="自动登录">
       <el-col :span="3">
         <el-row justify="start">
-          <el-switch
-            v-model="form.enableHttpProxy"
-            inline-prompt
-            active-text="启用"
-            inactive-text="关闭"
-          ></el-switch>
+          <el-switch v-model="form.enableAutoLogin" inline-prompt active-text="启用" inactive-text="关闭"></el-switch>
+        </el-row>
+      </el-col>
+    </el-form-item>
+    <el-form-item label="默认出价方式">
+      <el-select v-model="form.defaultBiddingMethod">
+        <el-option v-for="item in Constants.BiddingMethodOptions" :key="item.value" :label="item.label"
+          :value="item.value">
+        </el-option>
+      </el-select>
+    </el-form-item>
+    <el-form-item label="默认加价幅度(元)">
+      <el-input-number v-model="form.defaultMarkup" :min="1" label="加价幅度(元)"></el-input-number>
+    </el-form-item>
+    <el-form-item label="默认出价时间(毫秒)">
+      <el-input-number v-model="form.defaultLastBidCountdownTime" :min="1" label="默认最后出价倒数时间(毫秒)"></el-input-number>
+    </el-form-item>
+    <el-form-item label="Telegram通知">
+      <el-col :span="3">
+        <el-row justify="start">
+          <el-switch v-model="form.enableTel" inline-prompt active-text="启用" inactive-text="关闭"></el-switch>
+        </el-row>
+      </el-col>
+      <el-col :span="21">
+        <el-row justify="space-between">
+          <el-col :span="18">
+            <el-input v-model="form.telBotToken" placeholder="bot token" />
+          </el-col>
+          <el-col :span="5">
+            <el-input v-model="form.telChatId" placeholder="chat id" />
+          </el-col>
+        </el-row>
+      </el-col>
+    </el-form-item>
+    <el-form-item label="Telegram Http代理">
+      <el-col :span="3">
+        <el-row justify="start">
+          <el-switch v-model="form.enableHttpProxy" inline-prompt active-text="启用" inactive-text="关闭"></el-switch>
         </el-row>
       </el-col>
       <el-col :span="21">
@@ -37,55 +62,46 @@
       <el-col :span="21">
         <el-row justify="space-between">
           <el-col :span="11">
-            <el-input
-              v-model="form.proxyUserName"
-              placeholder="用户名 没有则不填"
-            />
+            <el-input v-model="form.proxyUserName" placeholder="用户名 没有则不填" />
           </el-col>
           <el-col :span="11">
-            <el-input
-              v-model="form.proxyPassword"
-              placeholder="密码 没有则不填"
-            />
+            <el-input v-model="form.proxyPassword" placeholder="密码 没有则不填" />
           </el-col>
         </el-row>
       </el-col>
     </el-form-item>
-    <el-form-item label="Telegram通知">
+    <el-form-item label="出价接口 Http代理">
       <el-col :span="3">
         <el-row justify="start">
-          <el-switch
-            v-model="form.enableTel"
-            inline-prompt
-            active-text="启用"
-            inactive-text="关闭"
-          ></el-switch>
+          <el-switch v-model="form.enableApiHttpProxy" inline-prompt active-text="启用" inactive-text="关闭"></el-switch>
         </el-row>
       </el-col>
       <el-col :span="21">
         <el-row justify="space-between">
-          <el-col :span="18">
-            <el-input v-model="form.telBotToken" placeholder="bot token" />
+          <el-col :span="11">
+            <el-input v-model="form.apiProxyHost" placeholder="代理Host" />
           </el-col>
-          <el-col :span="5">
-            <el-input v-model="form.telChatId" placeholder="chat id" />
+          <el-col :span="11">
+            <el-input v-model="form.apiProxyPort" placeholder="端口" />
           </el-col>
         </el-row>
       </el-col>
     </el-form-item>
-    <el-form-item label="自动登录">
-      <el-col :span="3">
-        <el-row justify="start">
-          <el-switch
-            v-model="form.enableAutoLogin"
-            inline-prompt
-            active-text="启用"
-            inactive-text="关闭"
-          ></el-switch>
+    <el-form-item>
+      <el-col :span="3"> </el-col>
+      <el-col :span="21">
+        <el-row justify="space-between">
+          <el-col :span="11">
+            <el-input v-model="form.apiProxyUserName" placeholder="用户名 没有则不填" />
+          </el-col>
+          <el-col :span="11">
+            <el-input v-model="form.apiProxyPassword" placeholder="密码 没有则不填" />
+          </el-col>
         </el-row>
       </el-col>
     </el-form-item>
   </el-form>
+
   <el-row justify="center">
     <el-col>
       <el-button type="primary" @click="handleSaveOptions">保存</el-button>
@@ -118,6 +134,15 @@ export default defineComponent({
               if (data) {
                 // 初始化表单中的用户配置数据
                 dataMap.form = data;
+                if (!data.defaultLastBidCountdownTime) {
+                  dataMap.form.defaultLastBidCountdownTime = 300;
+                }
+                if (!data.defaultMarkup) {
+                  dataMap.form.defaultMarkup = 2;
+                }
+                if (!data.defaultBiddingMethod) {
+                  dataMap.form.defaultBiddingMethod = Constants.BiddingMethod.ONE_TIME_BID;
+                }
               }
             })
             .catch((e) => console.log("getUserData error = ", e));
@@ -127,6 +152,7 @@ export default defineComponent({
     );
 
     const dataMap = reactive({
+      Constants,
       formRef: null,
       isDark: useDark(),
       toggleDark() {
@@ -142,12 +168,23 @@ export default defineComponent({
         proxyUserName: null,
         proxyPassword: null,
         enableAutoLogin: false,
+        defaultLastBidCountdownTime: 300,
+        defaultMarkup: 2,
+        defaultBiddingMethod: Constants.BiddingMethod.ONE_TIME_BID,
+        enableApiHttpProxy: false,
+        apiProxyHost: null,
+        apiProxyPort: null,
+        apiProxyUserName: null,
+        apiProxyPassword: null,
       },
       handleSaveOptions() {
         if (window.ipc) {
           window.ipc.send("toMain", {
             event: "setUserDataJsonProperty",
-            params: { key: Constants.StoreKeys.OPTIONS_KEY, value: JSON.stringify(dataMap.form) },
+            params: {
+              key: Constants.StoreKeys.OPTIONS_KEY,
+              value: JSON.stringify(dataMap.form),
+            },
           });
         }
         dataMap.handleClose();

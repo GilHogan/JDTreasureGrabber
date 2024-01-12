@@ -1,4 +1,4 @@
-const { getUserData } = require("./storeUtil");
+const { getUserDataProperty } = require("./storeUtil");
 const http = require('http');
 const Constants = require("../../constant/constants");
 
@@ -7,7 +7,7 @@ const consoleUtil = require('./consoleLogUtil');
 
 function sendNotice(msg) {
     consoleUtil.log("start sendNotice msg = ", msg);
-    const userDataOptions = getUserData()[Constants.StoreKeys.OPTIONS_KEY];
+    const userDataOptions = getUserDataProperty(Constants.StoreKeys.OPTIONS_KEY);
     const { enableTel, telBotToken, telChatId } = userDataOptions || {};
     if (enableTel && telBotToken && telChatId) {
         // 发送电报消息
