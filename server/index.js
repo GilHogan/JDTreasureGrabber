@@ -26,7 +26,6 @@ let NowPrice;
 let EndTime;
 let CurrentTime;
 let Cookie = null;
-let RefreshBatchInfoTimer;
 let OfferPriceTimer;
 let WaitForProductStartTimer;
 let Bidder;
@@ -38,12 +37,14 @@ let isLogin = false;
 // 出价加价幅度
 let Markup = 2;
 // 最后出价倒数时间（毫秒）
-let LastBidCountdownTime = 350;
+let LastBidCountdownTime;
 // 出价方式
 let BiddingMethod = Constants.BiddingMethod.ON_OTHERS_BID;
 const noticeTitle = "京东夺宝岛助手提示";
 let BidderNickName;
 let ProductDetail;
+// 获取竞拍实时信息调用接口的耗时
+let LastGetBatchInfoOffsetTime = 155;
 
 /**
  * 启动浏览器，加载页面
@@ -228,7 +229,6 @@ function resetData() {
 	BidderNickName = null;
 	EndTime = null;
 	CurrentTime = null;
-	RefreshBatchInfoTimer && clearInterval(RefreshBatchInfoTimer);
 	CycleTimer && clearTimeout(CycleTimer);
 	CheckBidIsNearingEnd && clearTimeout(CheckBidIsNearingEnd);
 	OfferPriceTimer && clearTimeout(OfferPriceTimer);
@@ -399,19 +399,19 @@ function getBatchInfo(isLastQuery = false) {
 		try {
 			const result = await fetchBatchInfo(Item_ID);
 			const endTime = new Date().getTime();
-			const offsetTime = endTime - startTime;
+			LastGetBatchInfoOffsetTime = endTime - startTime;
 			if (result && result.data && result.data[Item_ID]) {
 				NowPrice = result.data[Item_ID].currentPrice;
 				EndTime = result.data[Item_ID].actualEndTime;
 				CurrentTime = result.list[0];
 				// consoleUtil.log("getBatchInfo end origin CurrentTime = ", CurrentTime);
 				// 假定服务器的当前时间是接口获取到的时间加上请求耗时
-				CurrentTime = CurrentTime + offsetTime;
+				CurrentTime = CurrentTime + LastGetBatchInfoOffsetTime;
 				CurrentBidder = result.data[Item_ID].currentBidder;
 				BidderNickName = result.data[Item_ID].bidderNickName;
 				consoleUtil.log("getBatchInfo get end NowPrice = ", NowPrice, ", CurrentTime = ", CurrentTime, ", EndTime = ", EndTime,
 					", CurrentTime format = ", dayjs(CurrentTime).format('YYYY-MM-DD HH:mm:sss'), ", EndTime format = ", dayjs(EndTime).format('YYYY-MM-DD HH:mm:sss'),
-					", CurrentBidder = ", CurrentBidder, ", BidderNickName = ", BidderNickName);
+					", CurrentBidder = ", CurrentBidder, ", BidderNickName = ", BidderNickName, ", offsetTime = ", LastGetBatchInfoOffsetTime);
 				if (isLastQuery) {
 					// 出价后，最后一次查询商品信息，发送通知消息
 					handleSendNotice(`抢购结束`);
@@ -428,22 +428,6 @@ function getBatchInfo(isLastQuery = false) {
 		}
 		resolve();
 	});
-}
-
-function refreshBatchInfo() {
-	let fetching = false;
-	RefreshBatchInfoTimer = setInterval(async function () {
-		if (fetching) {
-			return;
-		}
-		fetching = true;
-		try {
-			await getBatchInfo();
-		} catch (error) {
-			consoleUtil.log("refreshBatchInfo error: ", error.message);
-		}
-		fetching = false;
-	}, 10);
 }
 
 /**
@@ -476,7 +460,6 @@ function handlePriceAndTime(isFirstHandlePrice = false, isLastHandlePrice = fals
 		if (MaxPrice && ProductDetail && ProductDetail.auctionInfo
 			&& ProductDetail.auctionInfo.startPrice && MaxPrice < ProductDetail.auctionInfo.startPrice) {
 			consoleUtil.log("设定的最高价格低于商品起拍价，抢购结束");
-			RefreshBatchInfoTimer && clearInterval(RefreshBatchInfoTimer);
 			new Notification({ title: noticeTitle, body: "设定的最高价格低于商品起拍价，抢购结束" }).show();
 			handleSendNotice(`设定的最高价格低于商品起拍价，抢购结束`);
 			CheckBidIsNearingEnd && clearTimeout(CheckBidIsNearingEnd);
@@ -498,7 +481,6 @@ function handlePriceAndTime(isFirstHandlePrice = false, isLastHandlePrice = fals
 
 	if (isAboveMaxPrice) {
 		consoleUtil.log("超过最高价格，抢购结束");
-		RefreshBatchInfoTimer && clearInterval(RefreshBatchInfoTimer);
 		new Notification({ title: noticeTitle, body: "超过最高价格，抢购结束" }).show();
 		handleSendNotice(`超过最高价格，抢购结束`);
 		CheckBidIsNearingEnd && clearTimeout(CheckBidIsNearingEnd);
@@ -507,7 +489,6 @@ function handlePriceAndTime(isFirstHandlePrice = false, isLastHandlePrice = fals
 
 	if (time < 0) {
 		consoleUtil.log("抢购时间结束");
-		clearInterval(RefreshBatchInfoTimer);
 		new Notification({ title: noticeTitle, body: "抢购时间结束" }).show();
 		handleSendNotice(`抢购时间结束`);
 		CheckBidIsNearingEnd && clearTimeout(CheckBidIsNearingEnd);
@@ -594,19 +575,20 @@ async function buyByAPI(price) {
  * 最后倒计时出价处理
  */
 async function handleLastMinuteBuy(time) {
-	if (BiddingMethod !== Constants.BiddingMethod.ONE_TIME_BID && RefreshBatchInfoTimer === undefined) {
-		// 刷新当前竞价信息; 一口价出价方式不做刷新
-		refreshBatchInfo();
-	}
 
-	let bidTime = time - LastBidCountdownTime;
-	bidTime <= 0 ? time - 100 : bidTime;
+	let bidTime = time - LastBidCountdownTime - (LastGetBatchInfoOffsetTime || 155);
+	bidTime = bidTime <= 0 ? time - (LastGetBatchInfoOffsetTime || 155) : bidTime;
 	consoleUtil.log(`${bidTime}毫秒后开始出价`);
 
 	OfferPriceTimer && clearTimeout(OfferPriceTimer);
 
 	OfferPriceTimer = setTimeout(async function () {
+
 		try {
+			// 等待最后一次更新竞拍实时信息
+			consoleUtil.log("start last update batchInfo.");
+			await getBatchInfo();
+
 			let bidPrice;
 			let isAboveMaxPrice = false;
 			if (BiddingMethod == Constants.BiddingMethod.ONE_TIME_BID) {
@@ -637,7 +619,6 @@ async function handleLastMinuteBuy(time) {
 
 			const currentRemainTime = EndTime - CurrentTime;
 			consoleUtil.log(`${bidTime}毫秒后出价:${bidPrice}元，当前时间：${new Date().getTime()}, 上一次请求竞价信息后的剩余时间：${currentRemainTime}`);
-			RefreshBatchInfoTimer && clearInterval(RefreshBatchInfoTimer);
 			if (isAboveMaxPrice) {
 				consoleUtil.log("超过最高价格，抢购结束");
 				new Notification({ title: noticeTitle, body: "超过最高价格，抢购结束" }).show();

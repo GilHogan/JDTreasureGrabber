@@ -3,11 +3,17 @@ const https = require("https");
 const dayjs = require('dayjs');
 const consoleUtil = require('./utils/consoleLogUtil');
 const API = require("../constant/constants").API;
+const { getUserDataProperty } = require("./utils/storeUtil");
+const http = require('http');
+const Constants = require("../constant/constants");
 
 /**
  * 发出出价的请求
  * */
 function postOfferPrice(para, currentTime, cookies) {
+	const userDataOptions = getUserDataProperty(Constants.StoreKeys.OPTIONS_KEY) || {};
+	const { enableApiHttpProxy, apiProxyHost, apiProxyPort, apiProxyUserName, apiProxyPassword } = userDataOptions;
+
 	return new Promise((resolve, reject) => {
 		const price = para.body.price;
 		para.body = JSON.stringify(para.body);
@@ -31,36 +37,65 @@ function postOfferPrice(para, currentTime, cookies) {
 			}
 		};
 
-		const req = https.request(options, (res) => {
-			let rawData = "";
-
-			res.setEncoding('utf8');
-
-			res.on('data', (chunk) => {
-				rawData += chunk;
-			});
-
-			res.on('end', () => {
-				consoleUtil.log("postOfferPrice end 出价:", price, ", 当前时间：", dayjs().format('YYYY-MM-DD HH:mm:sss'), new Date().getTime(), " , 结果:" + rawData);
-				let result = null
-				try {
-					const parsedData = JSON.parse(rawData) || {};
-					result = parsedData.result;
-				} catch (e) {
-					consoleUtil.error("postOfferPrice error: ", e.message);
+		if (enableApiHttpProxy && apiProxyHost && apiProxyPort) {
+			const proxyHeaders = {};
+			if (apiProxyUserName && apiProxyPassword) {
+				proxyHeaders['Proxy-Authorization'] = 'Basic ' + Buffer.from(apiProxyUserName + ':' + apiProxyPassword).toString('base64');
+			}
+			http.request({
+				host: apiProxyHost,
+				port: apiProxyPort,
+				method: 'CONNECT',
+				path: `${API.api_jd_hostname}:443`,
+				headers: proxyHeaders,
+			}).on('connect', (res, socket) => {
+				if (res.statusCode === 200) {
+					// connected to proxy server
+					options.agent = new https.Agent({ socket });
+					handlePostOfferPrice(options, postData, price, resolve, reject);
+				} else {
+					reject("代理服务器连接失败");
 				}
-				resolve(result);
-			});
-		});
-
-		req.on('error', (e) => {
-			consoleUtil.error(`requestOfferPrice 请求遇到问题: ${e.message}`);
-			reject(e);
-		});
-
-		req.write(postData);
-		req.end();
+			}).on('error', (err) => {
+				consoleUtil.error(`postOfferPrice 代理请求遇到问题: ${err.message}`);
+				reject(err);
+			}).end();
+		} else {
+			handlePostOfferPrice(options, postData, price, resolve, reject);
+		}
 	});
+}
+
+function handlePostOfferPrice(options, postData, price, resolve, reject) {
+	const req = https.request(options, (res) => {
+		let rawData = "";
+
+		res.setEncoding('utf8');
+
+		res.on('data', (chunk) => {
+			rawData += chunk;
+		});
+
+		res.on('end', () => {
+			consoleUtil.log("postOfferPrice end 出价:", price, ", 当前时间：", dayjs().format('YYYY-MM-DD HH:mm:sss'), new Date().getTime(), " , 结果:" + rawData);
+			let result = null
+			try {
+				const parsedData = JSON.parse(rawData) || {};
+				result = parsedData.result;
+			} catch (e) {
+				consoleUtil.error("postOfferPrice error: ", e.message);
+			}
+			resolve(result);
+		});
+	});
+
+	req.on('error', (e) => {
+		consoleUtil.error(`postOfferPrice 请求遇到问题: ${e.message}`);
+		reject(e);
+	});
+
+	req.write(postData);
+	req.end();
 }
 
 /**

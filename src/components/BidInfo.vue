@@ -1,10 +1,5 @@
 <template>
-  <el-descriptions
-    title="商品信息"
-    label-class-name="my-label"
-    size="small"
-    :column="2"
-  >
+  <el-descriptions title="商品信息" label-class-name="my-label" size="small" :column="2">
     <el-descriptions-item label="名称">{{
       info.auctionInfo && info.auctionInfo.productName
     }}</el-descriptions-item>

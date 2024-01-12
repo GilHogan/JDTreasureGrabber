@@ -2,12 +2,7 @@
   <div id="app">
     <el-row class="app-above">
       <el-col :span="24" class="app-above__col">
-        <item-info
-          @go-to-bid="goToBid"
-          @fetchBidDetail="fetchBidDetail"
-          @update-bid="updateBid"
-          ref="itemInfoRef"
-        >
+        <item-info @go-to-bid="goToBid" @fetchBidDetail="fetchBidDetail" @update-bid="updateBid" ref="itemInfoRef">
         </item-info>
         <el-row>
           <el-col :span="12">
@@ -21,9 +16,7 @@
     </el-row>
     <el-row class="app-under">
       <el-col :span="24">
-        <ProductList
-          @setToCurrentBidAndFetchDetail="setToCurrentBidAndFetchDetail"
-        />
+        <ProductList @setToCurrentBidAndFetchDetail="setToCurrentBidAndFetchDetail" />
       </el-col>
     </el-row>
   </div>
