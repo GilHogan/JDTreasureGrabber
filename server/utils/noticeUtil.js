@@ -4,14 +4,23 @@ const Constants = require("../../constant/constants");
 
 const https = require("https");
 const consoleUtil = require('./consoleLogUtil');
+const { Notification } = require('electron');
+const noticeTitle = "京东夺宝岛助手提示";
 
-function sendNotice(msg) {
-    consoleUtil.log("start sendNotice msg = ", msg);
+function sendNotice(msg, telMsg) {
+
+    consoleUtil.log("sendNotice msg = ", msg);
+
     const userDataOptions = getUserDataProperty(Constants.StoreKeys.OPTIONS_KEY);
-    const { enableTel, telBotToken, telChatId } = userDataOptions || {};
-    if (enableTel && telBotToken && telChatId) {
+    const { enableTel, telBotToken, telChatId, enableDesktopNotification } = userDataOptions || {};
+
+    if (enableDesktopNotification || undefined === enableDesktopNotification) {
+        new Notification({ title: noticeTitle, body: msg }).show();
+    }
+
+    if (telMsg && enableTel && telBotToken && telChatId) {
         // 发送电报消息
-        sendTelMsg(telBotToken, telChatId, msg, userDataOptions)
+        sendTelMsg(telBotToken, telChatId, telMsg, userDataOptions)
             .catch((e) => { consoleUtil.log("sendTelMsg error = ", e); });
     }
 }

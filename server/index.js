@@ -3,7 +3,6 @@ const findChrome = require('../node_modules/carlo/lib/find_chrome.js');
 const querystring = require("querystring");
 const { postOfferPrice, fetchBatchInfo, fetchBidDetail, fetchProduct, loopRequestAvoidCurrentLimiting, sleep } = require("./api");
 const dayjs = require('dayjs');
-const { Notification } = require('electron');
 const Constants = require("../constant/constants");
 const consoleUtil = require('./utils/consoleLogUtil');
 const { sendNotice } = require('./utils/noticeUtil');
@@ -38,22 +37,22 @@ let isLogin = false;
 let Markup = 2;
 // 最后出价倒数时间（毫秒）
 let LastBidCountdownTime;
-// 出价方式
+// 抢购方式
 let BiddingMethod = Constants.BiddingMethod.ON_OTHERS_BID;
-const noticeTitle = "京东夺宝岛助手提示";
 let BidderNickName;
 let ProductDetail;
 // 获取竞拍实时信息调用接口的耗时
 let LastGetBatchInfoOffsetTime = 155;
+let OfferPriceBack;
 
 /**
  * 启动浏览器，加载页面
  * */
 function goToBid(params) {
-	const { id, price, bidder, markup, lastBidCountdownTime, biddingMethod, minPrice } = params;
+	const { id, price, bidder, markup, lastBidCountdownTime, biddingMethod, minPrice, offerPriceBack } = params;
 	if (Browser && Browser.isConnected()) {
 		if (isLogin) {
-			new Notification({ title: noticeTitle, body: "抢购已开始" }).show();
+			handleSendNotice("抢购已开始");
 			return;
 		}
 	}
@@ -69,7 +68,8 @@ function goToBid(params) {
 	Markup = markup;
 	LastBidCountdownTime = lastBidCountdownTime;
 	BiddingMethod = biddingMethod;
-	consoleUtil.log("goToBid Item_URL = ", Item_URL, Item_ID, MaxPrice, MinPrice, Bidder, Markup, LastBidCountdownTime, BiddingMethod);
+	OfferPriceBack = offerPriceBack;
+	consoleUtil.log("goToBid Item_URL = ", Item_URL, Item_ID, MaxPrice, MinPrice, Bidder, Markup, LastBidCountdownTime, BiddingMethod, OfferPriceBack);
 	initBid();
 }
 
@@ -77,10 +77,10 @@ function goToBid(params) {
  * 更新
  * */
 async function updateBid(params) {
-	const { id, price, bidder, markup, lastBidCountdownTime, biddingMethod, minPrice } = params;
+	const { id, price, bidder, markup, lastBidCountdownTime, biddingMethod, minPrice, offerPriceBack } = params;
 
 	if (!isLogin) {
-		new Notification({ title: noticeTitle, body: "请先点击开始抢购，并登录" }).show();
+		handleSendNotice("请先点击开始抢购，并登录");
 		return;
 	}
 
@@ -97,8 +97,9 @@ async function updateBid(params) {
 		Markup = markup;
 		LastBidCountdownTime = lastBidCountdownTime;
 		BiddingMethod = biddingMethod;
+		OfferPriceBack = offerPriceBack;
 
-		consoleUtil.log("updateBid Item_URL = ", Item_URL, Item_ID, MaxPrice, MinPrice, Bidder, Markup, LastBidCountdownTime, BiddingMethod);
+		consoleUtil.log("updateBid Item_URL = ", Item_URL, Item_ID, MaxPrice, MinPrice, Bidder, Markup, LastBidCountdownTime, BiddingMethod, OfferPriceBack);
 
 		if (!page.isClosed()) {
 			// 关闭之前的页面
@@ -112,7 +113,7 @@ async function updateBid(params) {
 
 		handleGoToTargetPage();
 	} else {
-		new Notification({ title: noticeTitle, body: "请未找到抢购的浏览器窗口" }).show();
+		handleSendNotice("请未找到抢购的浏览器窗口");
 		return;
 	}
 }
@@ -128,7 +129,7 @@ async function initBid() {
 
 	consoleUtil.log("initBid page = ", page);
 
-	const { options = {}, [Constants.StoreKeys.COOKIES_KEY]: cookies } = getUserData();
+	const { [Constants.StoreKeys.OPTIONS_KEY]: options = {}, [Constants.StoreKeys.COOKIES_KEY]: cookies } = getUserData();
 	// 是否自动登录的处理
 	if (options.enableAutoLogin && cookies && cookies.length > 0) {
 		// 监听获取用户登录信息的请求
@@ -210,7 +211,9 @@ async function initBrowser() {
 	Browser.on("disconnected", () => {
 		consoleUtil.log("Browser on disconnected");
 		// 监听浏览器断开连接, 重置数据
-		resetData();
+		if (!OfferPriceBack) {
+			resetData();
+		}
 		isLogin = false;
 		Browser = null;
 		page = null;
@@ -260,9 +263,7 @@ async function handleGoToTargetPage() {
 	// 查询商品详情
 	ProductDetail = await loopRequestAvoidCurrentLimiting(() => getBidDetail(Item_ID));
 	if (!ProductDetail || !ProductDetail.auctionInfo || !ProductDetail.auctionInfo.startTime || !ProductDetail.currentTime) {
-		consoleUtil.log("商品详情获取失败，请检查");
-		new Notification({ title: noticeTitle, body: "商品详情获取失败，请检查" }).show();
-		handleSendNotice(`商品详情获取失败，请检查`);
+		handleSendNotice(`商品详情获取失败，请检查`, true);
 		resetData();
 		return;
 	}
@@ -272,7 +273,7 @@ async function handleGoToTargetPage() {
 
 	// 等待商品开始抢购
 	await waitForProductStart();
-	if (!page || page.isClosed()) {
+	if (!OfferPriceBack && (!page || page.isClosed())) {
 		// 页面关闭，则退出
 		resetData();
 		return;
@@ -281,52 +282,54 @@ async function handleGoToTargetPage() {
 	// 避免服务端限流循环获取竞拍实时信息
 	const isGetBatchInfoSuccess = await loopRequestAvoidCurrentLimiting(getBatchInfo);
 	if (!isGetBatchInfoSuccess || !EndTime) {
-		consoleUtil.log("获取抢购信息失败，请检查");
-		new Notification({ title: noticeTitle, body: "获取抢购信息失败，请检查" }).show();
-		handleSendNotice(`获取抢购信息失败，请检查`);
+		handleSendNotice(`获取抢购信息失败，请检查`, true);
 		resetData();
 		return;
 	}
 
-	// 启用拦截器
-	await page.setRequestInterception(true).catch();
+	if (OfferPriceBack) {
+		handlePriceAndTime(true);
+	} else {
+		// 启用拦截器
+		await page.setRequestInterception(true).catch();
 
-	// 对出价进行拦截，目的在于获取加密参数，不需要真实出价，所以需要拦截，后续的出价请求不能拦截
-	page.on("request", async function (request) {
+		// 对出价进行拦截，目的在于获取加密参数，不需要真实出价，所以需要拦截，后续的出价请求不能拦截
+		page.on("request", async function (request) {
 
-		if (request.isInterceptResolutionHandled()) {
-			return;
-		}
-
-		if (['image', 'stylesheet', 'font', 'script'].indexOf(request.resourceType()) !== -1) {
-			request.abort().catch();
-			return;
-		}
-
-		if (request.url().indexOf(API.api_jd) !== -1 && request.url().indexOf(API.offer_price_function_id) !== -1) {
-			let post_data = request.postData();
-			if (post_data) {
-				let post_data_obj = querystring.parse(post_data);
-				if (post_data_obj && post_data_obj.body) {
-					const post_data_obj_body = JSON.parse(post_data_obj.body);
-					if (!OfferPricePara && post_data_obj_body && post_data_obj_body.auctionId && post_data_obj_body.auctionId == Item_ID) {
-						OfferPricePara = post_data_obj_body;
-						consoleUtil.log("加密参数获取成功！！");
-						request.abort();
-						handlePriceAndTime(true);
-						return;
-					}
-				}
+			if (request.isInterceptResolutionHandled()) {
+				return;
 			}
 
-			request.continue().catch();
-		} else {
-			request.continue().catch();
-		}
-	});
+			if (['image', 'stylesheet', 'font', 'script'].indexOf(request.resourceType()) !== -1) {
+				request.abort().catch();
+				return;
+			}
 
-	// 通过页面操作，模拟真实的用户操作，以便获取加密参数
-	await buyByPage(1);
+			if (request.url().indexOf(API.api_jd) !== -1 && request.url().indexOf(API.offer_price_function_id) !== -1) {
+				let post_data = request.postData();
+				if (post_data) {
+					let post_data_obj = querystring.parse(post_data);
+					if (post_data_obj && post_data_obj.body) {
+						const post_data_obj_body = JSON.parse(post_data_obj.body);
+						if (!OfferPricePara && post_data_obj_body && post_data_obj_body.auctionId && post_data_obj_body.auctionId == Item_ID) {
+							OfferPricePara = post_data_obj_body;
+							consoleUtil.log("加密参数获取成功！！");
+							request.abort();
+							handlePriceAndTime(true);
+							return;
+						}
+					}
+				}
+
+				request.continue().catch();
+			} else {
+				request.continue().catch();
+			}
+		});
+
+		// 通过页面操作，模拟真实的用户操作，以便获取加密参数
+		await buyByPage(1);
+	}
 }
 
 /**
@@ -339,33 +342,42 @@ async function waitForProductStart() {
 	let pageReload = false;
 	const waitMilliseconds = ProductDetail.auctionInfo.startTime - ProductDetail.currentTime;
 
-	do {
-		if (page) {
-			try {
-				button = await page.$("#InitCartUrl");
-				if (button === null) {
-					await sleep(sleepSeconds * 1000);
+	if (OfferPriceBack) {
+		// 等待商品开始抢购
+		await new Promise((resolve, reject) => {
+			WaitForProductStartTimer = setTimeout(function () {
+				resolve();
+			}, waitMilliseconds)
+		});
+	} else {
+		do {
+			if (page) {
+				try {
+					button = await page.$("#InitCartUrl");
+					if (button === null) {
+						await sleep(sleepSeconds * 1000);
 
-					if (!pageReload && waitMilliseconds > 0) {
-						// 等待商品开始抢购
-						await new Promise((resolve, reject) => {
-							WaitForProductStartTimer = setTimeout(function () {
-								resolve();
-							}, waitMilliseconds)
-						});
-						if (page) {
-							consoleUtil.log("page start reload.", dayjs().format('YYYY-MM-DD HH:mm:ss'));
-							// 商品开始抢购时刷新页面，解决页面倒计时不准确，导致出价按钮更新不及时的问题
-							await page.reload();
+						if (!pageReload && waitMilliseconds > 0) {
+							// 等待商品开始抢购
+							await new Promise((resolve, reject) => {
+								WaitForProductStartTimer = setTimeout(function () {
+									resolve();
+								}, waitMilliseconds)
+							});
+							if (page) {
+								consoleUtil.log("page start reload.", dayjs().format('YYYY-MM-DD HH:mm:ss'));
+								// 商品开始抢购时刷新页面，解决页面倒计时不准确，导致出价按钮更新不及时的问题
+								await page.reload();
+							}
+							pageReload = true;
 						}
-						pageReload = true;
 					}
+				} catch (error) {
+					consoleUtil.log("waitForProductStart error:", error.message);
 				}
-			} catch (error) {
-				consoleUtil.log("waitForProductStart error:", error.message);
 			}
-		}
-	} while (button === null && page && !page.isClosed());
+		} while (button === null && page && !page.isClosed());
+	}
 }
 
 /**
@@ -444,7 +456,7 @@ function handlePriceAndTime(isFirstHandlePrice = false, isLastHandlePrice = fals
 	consoleUtil.log("剩余抢购时间 毫秒：" + time, " , 秒：" + parseInt(time / 1000));
 	consoleUtil.log("当前出价人：" + CurrentBidder, " ,抢购用户账户名：" + Bidder);
 
-	if (!OfferPricePara) {
+	if (!OfferPricePara && !OfferPriceBack) {
 		consoleUtil.log("正在获取加密参数");
 		buyByPage(1);
 		return;
@@ -459,9 +471,7 @@ function handlePriceAndTime(isFirstHandlePrice = false, isLastHandlePrice = fals
 		}
 		if (MaxPrice && ProductDetail && ProductDetail.auctionInfo
 			&& ProductDetail.auctionInfo.startPrice && MaxPrice < ProductDetail.auctionInfo.startPrice) {
-			consoleUtil.log("设定的最高价格低于商品起拍价，抢购结束");
-			new Notification({ title: noticeTitle, body: "设定的最高价格低于商品起拍价，抢购结束" }).show();
-			handleSendNotice(`设定的最高价格低于商品起拍价，抢购结束`);
+			handleSendNotice(`设定的最高价格低于商品起拍价，抢购结束`, true);
 			CheckBidIsNearingEnd && clearTimeout(CheckBidIsNearingEnd);
 			return;
 		}
@@ -480,25 +490,19 @@ function handlePriceAndTime(isFirstHandlePrice = false, isLastHandlePrice = fals
 	}
 
 	if (isAboveMaxPrice) {
-		consoleUtil.log("超过最高价格，抢购结束");
-		new Notification({ title: noticeTitle, body: "超过最高价格，抢购结束" }).show();
-		handleSendNotice(`超过最高价格，抢购结束`);
+		handleSendNotice(`超过最高价格，抢购结束`, true);
 		CheckBidIsNearingEnd && clearTimeout(CheckBidIsNearingEnd);
 		return;
 	}
 
 	if (time < 0) {
-		consoleUtil.log("夺宝已结束-未出价");
-		new Notification({ title: noticeTitle, body: "夺宝已结束-未出价" }).show();
-		handleSendNotice(`夺宝已结束-未出价`);
+		handleSendNotice(`夺宝已结束-未出价`, true);
 		CheckBidIsNearingEnd && clearTimeout(CheckBidIsNearingEnd);
 		return;
 	}
 
 	if (isFirstHandlePrice) {
-		consoleUtil.log("抢购开始");
-		new Notification({ title: noticeTitle, body: "抢购开始" }).show();
-		handleSendNotice(`抢购开始`);
+		handleSendNotice(`抢购开始`, true);
 	}
 
 	if (isLastHandlePrice) {
@@ -542,6 +546,29 @@ async function buyByPage(price) {
  * 通过直接调用api接口去出价
  * */
 async function buyByAPI(price) {
+
+	if (OfferPriceBack) {
+		// 后台出价的处理
+		const { [Constants.StoreKeys.OPTIONS_KEY]: options = {}, [Constants.StoreKeys.COOKIES_KEY]: cookies = [] } = getUserData();
+		let eid;
+		if (options.enableCustomEid && options.customEid) {
+			eid = options.customEid;
+		} else {
+			const cookie = cookies.find(cookie => "3AB9D23F7A4B3C9B" === cookie.name) || {};
+			eid = cookie.value;
+		}
+		const auctionInfo = ProductDetail && ProductDetail.auctionInfo || {};
+
+		OfferPricePara = {
+			address: auctionInfo.freightArea,
+			auctionId: Item_ID,
+			price,
+			entryid: "",
+			eid,
+			transformRequest: [null]
+		}
+	}
+
 	if (OfferPricePara === null) {
 		consoleUtil.log("没有正确获取到拍卖参数，无法执行购买");
 	} else {
@@ -562,8 +589,7 @@ async function buyByAPI(price) {
 			// 发出出价的请求
 			const result = await postOfferPrice({ functionId: API.offer_price_function_id, body: OfferPricePara }, CurrentTime, Cookie);
 			if (result && result.message) {
-				new Notification({ title: noticeTitle, body: result.message }).show();
-				handleSendNotice(`${result.message} — 当前出价：${price}`);
+				handleSendNotice(`${result.message} — 当前出价：${price}`, true);
 			}
 		} catch (e) {
 			consoleUtil.error("buyByAPI error: ", e.message);
@@ -620,9 +646,7 @@ async function handleLastMinuteBuy(time) {
 			const currentRemainTime = EndTime - CurrentTime;
 			consoleUtil.log(`${bidTime}毫秒后出价:${bidPrice}元，当前时间：${new Date().getTime()}, 上一次请求竞价信息后的剩余时间：${currentRemainTime}`);
 			if (isAboveMaxPrice) {
-				consoleUtil.log("超过最高价格，抢购结束");
-				new Notification({ title: noticeTitle, body: "超过最高价格，抢购结束" }).show();
-				handleSendNotice(`超过最高价格，抢购结束`);
+				handleSendNotice(`超过最高价格，抢购结束`, true);
 			} else {
 				consoleUtil.log(new Date().getTime() + ":" + `出价${bidPrice}`);
 				await buyByAPI(bidPrice);
@@ -701,23 +725,27 @@ async function goToProductPage(productId) {
 /**
  * 发送通知消息的处理
  */
-function handleSendNotice(msg) {
-	const info = ProductDetail && ProductDetail.auctionInfo || {};
-	sendNotice(`
-	【抢购通知】
-	通知内容：${msg}
-	商品ID：${Item_ID}
-	商品名称：${info.productName || ''}
-	起拍价：${info.startPrice || ''}
-	封顶价：${info.maxPrice || ''}
-	抢购开始时间：${info.startTime ? dayjs(info.startTime).format("YYYY-MM-DD HH:mm:ss") : ''}
-	抢购结束时间：${info.endTime ? dayjs(info.endTime).format("YYYY-MM-DD HH:mm:ss") : ''}
-	设定最低价：${MinPrice || ''}
-	设定最高价：${MaxPrice || ''}
-	当前价格：${NowPrice || ''}
-	当前抢购人：${CurrentBidder || ''}
-	当前抢购人昵称：${BidderNickName || ''}
-	当前时间：${dayjs(CurrentTime ? CurrentTime : undefined).format('YYYY-MM-DD HH:mm:ss')}`);
+function handleSendNotice(msg, sendToTel) {
+	let telMsg;
+	if (sendToTel) {
+		const info = ProductDetail && ProductDetail.auctionInfo || {};
+		telMsg = `
+		【抢购通知】
+		通知内容：${msg}
+		商品ID：${Item_ID}
+		商品名称：${info.productName || ''}
+		起拍价：${info.startPrice || ''}
+		封顶价：${info.maxPrice || ''}
+		抢购开始时间：${info.startTime ? dayjs(info.startTime).format("YYYY-MM-DD HH:mm:ss") : ''}
+		抢购结束时间：${info.endTime ? dayjs(info.endTime).format("YYYY-MM-DD HH:mm:ss") : ''}
+		设定最低价：${MinPrice || ''}
+		设定最高价：${MaxPrice || ''}
+		当前价格：${NowPrice || ''}
+		当前抢购人：${CurrentBidder || ''}
+		当前抢购人昵称：${BidderNickName || ''}
+		当前时间：${dayjs(CurrentTime ? CurrentTime : undefined).format('YYYY-MM-DD HH:mm:ss')}`;
+	}
+	sendNotice(msg, telMsg);
 }
 
 module.exports = { goToBid, updateBid, getBidDetail, searchProduct, goToProductPage };

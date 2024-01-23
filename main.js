@@ -1,8 +1,9 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu, MenuItem, dialog, shell } = require('electron');
 const path = require('node:path');
 const { ipcHandle } = require("./server/ipcHandle");
 
 function createWindow() {
+	const iconPath = path.join(__dirname, 'public/favicon.ico');
 	// 创建浏览器窗口
 	const win = new BrowserWindow({
 		width: 1350,
@@ -13,8 +14,43 @@ function createWindow() {
 			enableRemoteModule: false,
 			preload: path.join(__dirname, "preload.js") // use a preload script
 		},
-		icon: path.join(__dirname, 'public/favicon.ico')
+		icon: iconPath
 	});
+
+	const menuItems = Menu.getApplicationMenu().items;
+	const helpMenuItem = menuItems.find(item => item.label === "Help");
+	if (helpMenuItem) {
+		helpMenuItem.submenu.append(new MenuItem({
+			label: 'Github',
+			click: () => {
+				shell.openExternal("https://github.com/GilHogan/JDTreasureGrabber");
+			}
+		}));
+		helpMenuItem.submenu.append(new MenuItem({
+			label: 'License',
+			click: () => {
+				shell.openExternal("https://www.gnu.org/licenses/agpl-3.0.en.html");
+			}
+		}));
+		helpMenuItem.submenu.append(new MenuItem({
+			label: 'About',
+			click: () => {
+				// 在这里添加处理 "About" 点击事件的代码
+				const version = app.getVersion();
+				const message = `Version: ${version} \n
+					Author: hogan \n
+					License: AGPL-3.0`;
+
+				dialog.showMessageBox({
+					icon: iconPath,
+					title: '京东夺宝岛助手',
+					message: message,
+					buttons: ['OK'],
+					type: 'none'
+				});
+			}
+		}));
+	}
 
 	// 并且为你的应用加载index.html
 	win.loadFile(path.join(__dirname, "pages/index.html"));
@@ -31,11 +67,11 @@ ipcMain.handle("toMain", async (e, args) => {
 // ipcRenderer.on 处理
 ipcMain.on("toMain", async (e, args) => {
 	if (!args || !args.event) {
-        return;
-    }
+		return;
+	}
 	const data = await ipcHandle(e, args);
 	const webContents = e.sender;
-    const win = BrowserWindow.fromWebContents(webContents)
+	const win = BrowserWindow.fromWebContents(webContents)
 	win.webContents.send("fromMain", { event: args.event, data: data });
 });
 

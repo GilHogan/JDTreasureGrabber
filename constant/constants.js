@@ -1,4 +1,4 @@
-// 出价方式
+// 抢购方式
 const BiddingMethod = {
     ON_OTHERS_BID: 1, // 自动加价
     WITHIN_PRICE_RANGE: 2, // 在价格区间内加价
@@ -6,7 +6,7 @@ const BiddingMethod = {
 }
 
 module.exports = {
-    // 出价方式
+    // 抢购方式
     BiddingMethod: BiddingMethod,
     // 存储数据的键
     StoreKeys: {

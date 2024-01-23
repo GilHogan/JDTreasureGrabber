@@ -4,11 +4,7 @@
       <CustomOption @closeOption="closeOption" :optionVisible="optionVisible" />
     </el-dialog>
 
-    <el-form :inline="true" ref="formRef" :model="form" label-width="70px" :rules="rules">
-      <el-form-item>
-        <el-button type="primary" size="small" @click="showOption">选项</el-button>
-      </el-form-item>
-
+    <el-form :inline="true" ref="formRef" :model="form" label-width="70px" :rules="rules" size="small">
       <el-form-item prop="id" label="商品ID" :rules="[
         { required: true, message: '请输入商品ID', trigger: 'blur' },
         {
@@ -19,7 +15,7 @@
       ]">
         <el-input size="small" v-model.number="form.id" placeholder="商品ID" input-style="width: 65px"></el-input>
       </el-form-item>
-      <el-form-item label="出价方式">
+      <el-form-item label="抢购方式">
         <el-select size="small" v-model="form.biddingMethod" style="width: 100px">
           <el-option v-for="item in Constants.BiddingMethodOptions" :key="item.value" :label="item.label"
             :value="item.value">
@@ -37,8 +33,11 @@
         v-show="form.biddingMethod !== Constants.BiddingMethod.ONE_TIME_BID">
         <el-input-number size="small" v-model="form.markup" :min="1" label="加价幅度(元)"></el-input-number>
       </el-form-item>
-      <el-form-item prop="lastBidCountdownTime" label="最后出价倒数时间(毫秒)" label-width="180px">
+      <el-form-item prop="lastBidCountdownTime" label="最后出价倒数时间(毫秒)" label-width="150px">
         <el-input-number size="small" v-model="form.lastBidCountdownTime" :min="1" label="最后出价倒数时间(毫秒)"></el-input-number>
+      </el-form-item>
+      <el-form-item prop="offerPriceBack" label="后台出价">
+        <el-switch v-model="form.offerPriceBack"></el-switch>
       </el-form-item>
     </el-form>
   </el-row>
@@ -51,8 +50,11 @@
         <el-button type="primary" size="small" @click="goToDid">开始抢购</el-button>
       </el-form-item>
       <el-form-item>
-        <el-button type="primary" size="small" @click="updateBid">更新抢购</el-button>
+        <el-button type="primary" size="small" @click="showOption">选项</el-button>
       </el-form-item>
+      <!-- <el-form-item>
+        <el-button type="primary" size="small" @click="updateBid">更新抢购</el-button>
+      </el-form-item> -->
     </el-form>
   </el-row>
 </template>
@@ -78,6 +80,7 @@ export default defineComponent({
               dataMap.form.lastBidCountdownTime = data.defaultLastBidCountdownTime || 300;
               dataMap.form.markup = data.defaultMarkup || 2;
               dataMap.form.biddingMethod = data.defaultBiddingMethod || Constants.BiddingMethod.ONE_TIME_BID;
+              dataMap.form.offerPriceBack = data.defaultOfferPriceBack || false;
             }
           })
           .catch((e) => console.log("getUserData error = ", e));
@@ -138,6 +141,7 @@ export default defineComponent({
         lastBidCountdownTime: 300,
         biddingMethod: Constants.BiddingMethod.ONE_TIME_BID,
         minPrice: undefined,
+        offerPriceBack: false,
       },
       rules: {
         price: { validator: validatePrice, trigger: "blur" },
@@ -211,4 +215,10 @@ export default defineComponent({
 });
 </script>
 
-<style scoped></style>
+<style scoped>
+.el-form--inline .el-form-item {
+  display: inline-flex;
+  vertical-align: middle;
+  margin-right: 12px;
+}
+</style>
