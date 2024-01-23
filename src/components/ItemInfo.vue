@@ -50,11 +50,11 @@
         <el-button type="primary" size="small" @click="goToDid">开始抢购</el-button>
       </el-form-item>
       <el-form-item>
+        <el-button type="primary" size="small" @click="updateBid">更新抢购</el-button>
+      </el-form-item>
+      <el-form-item>
         <el-button type="primary" size="small" @click="showOption">选项</el-button>
       </el-form-item>
-      <!-- <el-form-item>
-        <el-button type="primary" size="small" @click="updateBid">更新抢购</el-button>
-      </el-form-item> -->
     </el-form>
   </el-row>
 </template>

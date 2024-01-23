@@ -1,7 +1,7 @@
 {
 	"name": "JDTreasureGrabber",
 	"version": "0.3.4",
-	"author": "hogan <hogan01.id@gmail.com> (https://github.com/HoganGolden)",
+	"author": "hogan",
 	"private": true,
 	"main": "main.js",
 	"engines": {
@@ -100,7 +100,7 @@
 		"publish": [
 			{
 				"provider": "github",
-				"owner": "HoganGolden",
+				"owner": "hogan",
 				"repo": "JDTreasureGrabber"
 			}
 		],

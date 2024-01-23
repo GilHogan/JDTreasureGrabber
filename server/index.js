@@ -554,7 +554,8 @@ async function buyByAPI(price) {
 		if (options.enableCustomEid && options.customEid) {
 			eid = options.customEid;
 		} else {
-			const cookie = cookies.find(cookie => "3AB9D23F7A4B3C9B" === cookie.name) || {};
+			const eidKey = options.customEidKey || "3AB9D23F7A4B3C9B";
+			const cookie = cookies.find(cookie => eidKey === cookie.name) || {};
 			eid = cookie.value;
 		}
 		const auctionInfo = ProductDetail && ProductDetail.auctionInfo || {};

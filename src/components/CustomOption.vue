@@ -38,7 +38,8 @@
     <el-form-item label="桌面通知">
       <el-col :span="3">
         <el-row justify="start">
-          <el-switch v-model="form.enableDesktopNotification" inline-prompt active-text="启用" inactive-text="关闭"></el-switch>
+          <el-switch v-model="form.enableDesktopNotification" inline-prompt active-text="启用"
+            inactive-text="关闭"></el-switch>
         </el-row>
       </el-col>
     </el-form-item>
@@ -126,7 +127,14 @@
         </el-row>
       </el-col>
       <el-col :span="21">
-        <el-input v-model="form.customEid" placeholder="eid（替换出价接口所传的eid授权参数）" />
+        <el-row justify="space-between">
+          <el-col :span="11">
+            <el-input v-model="form.customEidKey" placeholder="eidKey" />
+          </el-col>
+          <el-col :span="11">
+            <el-input v-model="form.customEid" placeholder="eid（替换出价接口所传的eid授权参数）" />
+          </el-col>
+        </el-row>
       </el-col>
     </el-form-item>
   </el-form>
@@ -175,6 +183,9 @@ export default defineComponent({
                 if (undefined === data.enableDesktopNotification) {
                   dataMap.form.enableDesktopNotification = true;
                 }
+                if (!data.customEidKey) {
+                  dataMap.form.customEidKey = "3AB9D23F7A4B3C9B";
+                }
               }
             })
             .catch((e) => console.log("getUserData error = ", e));
@@ -212,6 +223,7 @@ export default defineComponent({
         customEid: null,
         defaultOfferPriceBack: false,
         enableDesktopNotification: true,
+        customEidKey: "3AB9D23F7A4B3C9B"
       },
       handleSaveOptions() {
         if (window.ipc) {
