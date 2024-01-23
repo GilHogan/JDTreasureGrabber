@@ -37,8 +37,8 @@ function createWindow() {
 			click: () => {
 				// 在这里添加处理 "About" 点击事件的代码
 				const version = app.getVersion();
-				const message = `Version: ${version} \n
-					Author: hogan \n
+				const message = `Version: ${version}
+					Author: hogan
 					License: AGPL-3.0`;
 
 				dialog.showMessageBox({
