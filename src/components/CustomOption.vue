@@ -1,5 +1,5 @@
 <template>
-  <el-form label-width="135px">
+  <el-form label-width="135px" size="small">
     <el-form-item label="主题">
       <el-switch v-model="isDark" inline-prompt @change="toggleDark" active-text="暗黑" inactive-text="明亮"></el-switch>
     </el-form-item>
@@ -10,7 +10,7 @@
         </el-row>
       </el-col>
     </el-form-item>
-    <el-form-item label="默认出价方式">
+    <el-form-item label="默认抢购方式">
       <el-select v-model="form.defaultBiddingMethod">
         <el-option v-for="item in Constants.BiddingMethodOptions" :key="item.value" :label="item.label"
           :value="item.value">
@@ -22,6 +22,25 @@
     </el-form-item>
     <el-form-item label="默认出价时间(毫秒)">
       <el-input-number v-model="form.defaultLastBidCountdownTime" :min="1" label="默认最后出价倒数时间(毫秒)"></el-input-number>
+    </el-form-item>
+    <el-form-item label="默认后台出价">
+      <el-col :span="3">
+        <el-row justify="start">
+          <el-switch v-model="form.defaultOfferPriceBack" inline-prompt active-text="启用" inactive-text="关闭"></el-switch>
+        </el-row>
+      </el-col>
+      <el-col :span="21">
+        <el-row justify="start">
+          <span>启用后台出价时，关闭浏览器抢购任务会继续执行</span>
+        </el-row>
+      </el-col>
+    </el-form-item>
+    <el-form-item label="桌面通知">
+      <el-col :span="3">
+        <el-row justify="start">
+          <el-switch v-model="form.enableDesktopNotification" inline-prompt active-text="启用" inactive-text="关闭"></el-switch>
+        </el-row>
+      </el-col>
     </el-form-item>
     <el-form-item label="Telegram通知">
       <el-col :span="3">
@@ -100,6 +119,16 @@
         </el-row>
       </el-col>
     </el-form-item>
+    <el-form-item label="自定义出价接口eid">
+      <el-col :span="3">
+        <el-row justify="start">
+          <el-switch v-model="form.enableCustomEid" inline-prompt active-text="启用" inactive-text="关闭"></el-switch>
+        </el-row>
+      </el-col>
+      <el-col :span="21">
+        <el-input v-model="form.customEid" placeholder="eid（替换出价接口所传的eid授权参数）" />
+      </el-col>
+    </el-form-item>
   </el-form>
 
   <el-row justify="center">
@@ -143,6 +172,9 @@ export default defineComponent({
                 if (!data.defaultBiddingMethod) {
                   dataMap.form.defaultBiddingMethod = Constants.BiddingMethod.ONE_TIME_BID;
                 }
+                if (undefined === data.enableDesktopNotification) {
+                  dataMap.form.enableDesktopNotification = true;
+                }
               }
             })
             .catch((e) => console.log("getUserData error = ", e));
@@ -176,6 +208,10 @@ export default defineComponent({
         apiProxyPort: null,
         apiProxyUserName: null,
         apiProxyPassword: null,
+        enableCustomEid: false,
+        customEid: null,
+        defaultOfferPriceBack: false,
+        enableDesktopNotification: true,
       },
       handleSaveOptions() {
         if (window.ipc) {
