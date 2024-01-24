@@ -3,7 +3,7 @@ const path = require('node:path');
 const { ipcHandle } = require("./server/ipcHandle");
 
 function createWindow() {
-	const iconPath = path.join(__dirname, 'public/favicon.ico');
+	const iconPath = path.join(__dirname, 'public/favicon.png');
 	// 创建浏览器窗口
 	const win = new BrowserWindow({
 		width: 1350,
@@ -37,9 +37,7 @@ function createWindow() {
 			click: () => {
 				// 在这里添加处理 "About" 点击事件的代码
 				const version = app.getVersion();
-				const message = `Version: ${version}
-					Author: hogan
-					License: AGPL-3.0`;
+				const message = `Version: ${version}\r\nAuthor: hogan \r\nLicense: AGPL-3.0`;
 
 				dialog.showMessageBox({
 					icon: iconPath,

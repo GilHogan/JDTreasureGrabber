@@ -83,7 +83,7 @@
 				"StartupNotify": "true",
 				"Encoding": "UTF-8"
 			},
-			"icon": "./public/",
+			"icon": "./public/favicon.png",
 			"target": [
 				"AppImage",
 				"rpm",
