@@ -132,7 +132,7 @@
             <el-input v-model="form.customEidKey" placeholder="eidKey" />
           </el-col>
           <el-col :span="11">
-            <el-input v-model="form.customEid" placeholder="eid（替换出价接口所传的eid授权参数）" />
+            <el-input v-model="form.customEid" placeholder="eid（可选项；替换出价接口所传的eid参数）" />
           </el-col>
         </el-row>
       </el-col>

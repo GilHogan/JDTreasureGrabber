@@ -656,7 +656,7 @@ async function handleLastMinuteBuy(time) {
 			// 最后再获取商品信息，查看竞拍结果
 			getBatchInfo().then(() => {
 				// 出价后，最后一次查询商品信息，发送通知消息
-				handleSendNotice(`夺宝已结束-已出价`);
+				handleSendNotice(`夺宝已结束-已出价`, true);
 			}).catch();
 		} catch (error) {
 			consoleUtil.log("handleLastMinuteBuy error:", error.message);
