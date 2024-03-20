@@ -48,6 +48,10 @@ function createWindow() {
 				});
 			}
 		}));
+
+		const menu = Menu.buildFromTemplate(menuItems);
+		// 重新设置修改后的菜单
+		Menu.setApplicationMenu(menu);
 	}
 
 	// 并且为你的应用加载index.html

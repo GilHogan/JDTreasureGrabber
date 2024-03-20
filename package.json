@@ -13,6 +13,7 @@
 		"lint": "vue-cli-service lint",
 		"dist": "vue-cli-service build && electron-builder --publish never",
 		"start": "chcp 65001 && electron .",
+		"start-mac": "electron .",
 		"release": "vue-cli-service build && electron-builder --publish always",
 		"dist-arm": "USE_SYSTEM_FPM=true npm run dist"
 	},
