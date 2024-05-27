@@ -61,7 +61,7 @@
           <el-tooltip content="点击预览" placement="top" :hide-after="0">
             <el-image style="width: 100px; height: 100px" :src="imageUrl(scope.row.primaryPic)"
               :preview-src-list="[previewUrl(scope.row.primaryPic)]" :z-index="999" :preview-teleported="true"
-              :lazy="false">
+              :lazy="true">
             </el-image>
           </el-tooltip>
         </template>
@@ -112,10 +112,10 @@ export default defineComponent({
         },
       ],
       imageUrl: computed(
-        () => (primaryPic) => API.image_url + "n1/s100x100_jfs" + primaryPic
+        () => (primaryPic) => API.image_url + "n4/" + primaryPic
       ),
       previewUrl: computed(
-        () => (primaryPic) => API.image_url + "n1/s800x800_jfs" + primaryPic
+        () => (primaryPic) => API.image_url + "n0/" + primaryPic
       ),
       productSearchResult: {
         pageCount: 0,
