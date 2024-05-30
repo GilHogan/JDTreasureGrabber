@@ -1,22 +1,19 @@
 <template>
-  <el-form label-width="135px" size="small">
+  <el-form label-width="60px" size="small" :inline="true">
     <el-form-item label="主题">
       <el-switch v-model="isDark" inline-prompt @change="toggleDark" active-text="暗黑" inactive-text="明亮"></el-switch>
     </el-form-item>
     <el-form-item label="自动更新">
-      <el-col :span="3">
-        <el-row justify="start">
-          <el-switch v-model="form.enableAutoUpdate" inline-prompt active-text="启用" inactive-text="关闭"></el-switch>
-        </el-row>
-      </el-col>
+      <el-switch v-model="form.enableAutoUpdate" inline-prompt active-text="启用" inactive-text="关闭"></el-switch>
     </el-form-item>
     <el-form-item label="自动登录">
-      <el-col :span="3">
-        <el-row justify="start">
-          <el-switch v-model="form.enableAutoLogin" inline-prompt active-text="启用" inactive-text="关闭"></el-switch>
-        </el-row>
-      </el-col>
+      <el-switch v-model="form.enableAutoLogin" inline-prompt active-text="启用" inactive-text="关闭"></el-switch>
     </el-form-item>
+    <el-form-item label="桌面通知">
+      <el-switch v-model="form.enableDesktopNotification" inline-prompt active-text="启用" inactive-text="关闭"></el-switch>
+    </el-form-item>
+  </el-form>
+  <el-form label-width="135px" size="small">
     <el-form-item label="默认抢购方式">
       <el-select v-model="form.defaultBiddingMethod">
         <el-option v-for="item in Constants.BiddingMethodOptions" :key="item.value" :label="item.label"
@@ -39,14 +36,6 @@
       <el-col :span="21">
         <el-row justify="start">
           <span>启用后台出价时，关闭浏览器抢购任务会继续执行</span>
-        </el-row>
-      </el-col>
-    </el-form-item>
-    <el-form-item label="桌面通知">
-      <el-col :span="3">
-        <el-row justify="start">
-          <el-switch v-model="form.enableDesktopNotification" inline-prompt active-text="启用"
-            inactive-text="关闭"></el-switch>
         </el-row>
       </el-col>
     </el-form-item>
