@@ -1,7 +1,8 @@
 {
 	"name": "JDTreasureGrabber",
-	"version": "0.3.4",
+	"version": "0.3.5",
 	"author": "hogan <hogan01.id@gmail.com> (https://github.com/GilHogan/JDTreasureGrabber)",
+	"description": "京东夺宝岛助手",
 	"private": true,
 	"main": "main.js",
 	"engines": {
@@ -13,6 +14,7 @@
 		"lint": "vue-cli-service lint",
 		"dist": "vue-cli-service build && electron-builder --publish never",
 		"start": "chcp 65001 && electron .",
+		"start-mac": "electron .",
 		"release": "vue-cli-service build && electron-builder --publish always",
 		"dist-arm": "USE_SYSTEM_FPM=true npm run dist"
 	},
@@ -21,6 +23,7 @@
 		"carlo": "^0.9.46",
 		"core-js": "^3.16.3",
 		"dayjs": "^1.11.7",
+		"electron-updater": "^6.1.8",
 		"puppeteer-core": "^20.7.2",
 		"vue": "^3.3.11"
 	},
@@ -100,7 +103,7 @@
 		"publish": [
 			{
 				"provider": "github",
-				"owner": "hogan",
+				"owner": "GilHogan",
 				"repo": "JDTreasureGrabber"
 			}
 		],
