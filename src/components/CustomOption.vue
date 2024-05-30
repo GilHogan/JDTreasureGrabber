@@ -3,6 +3,13 @@
     <el-form-item label="主题">
       <el-switch v-model="isDark" inline-prompt @change="toggleDark" active-text="暗黑" inactive-text="明亮"></el-switch>
     </el-form-item>
+    <el-form-item label="自动更新">
+      <el-col :span="3">
+        <el-row justify="start">
+          <el-switch v-model="form.enableAutoUpdate" inline-prompt active-text="启用" inactive-text="关闭"></el-switch>
+        </el-row>
+      </el-col>
+    </el-form-item>
     <el-form-item label="自动登录">
       <el-col :span="3">
         <el-row justify="start">
@@ -186,6 +193,9 @@ export default defineComponent({
                 if (!data.customEidKey) {
                   dataMap.form.customEidKey = "3AB9D23F7A4B3C9B";
                 }
+                if (undefined === data.enableAutoUpdate || null === data.enableAutoUpdate) {
+                  dataMap.form.enableAutoUpdate = true;
+                }
               }
             })
             .catch((e) => console.log("getUserData error = ", e));
@@ -210,6 +220,7 @@ export default defineComponent({
         proxyPort: null,
         proxyUserName: null,
         proxyPassword: null,
+        enableAutoUpdate: true,
         enableAutoLogin: false,
         defaultLastBidCountdownTime: 300,
         defaultMarkup: 2,
