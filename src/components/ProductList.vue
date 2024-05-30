@@ -59,9 +59,9 @@
       <el-table-column prop="primaryPic" label="封面" width="120">
         <template #default="scope">
           <el-tooltip content="点击预览" placement="top" :hide-after="0">
-            <el-image style="width: 100px; height: 100px" :src="imageUrl(scope.row.primaryPic)"
-              :preview-src-list="[previewUrl(scope.row.primaryPic)]" :z-index="999" :preview-teleported="true"
-              :lazy="false">
+            <el-image style="width: 100px; height: 100px" :src="imageUrl(scope.row.primaryPic, 'n4')"
+              :preview-src-list="[imageUrl(scope.row.primaryPic, 'n0')]" :z-index="999" :preview-teleported="true"
+              :lazy="true">
             </el-image>
           </el-tooltip>
         </template>
@@ -112,10 +112,7 @@ export default defineComponent({
         },
       ],
       imageUrl: computed(
-        () => (primaryPic) => API.image_url + "n1/s100x100_jfs" + primaryPic
-      ),
-      previewUrl: computed(
-        () => (primaryPic) => API.image_url + "n1/s800x800_jfs" + primaryPic
+        () => (primaryPic, size) => API.image_url + size + "/" + (primaryPic.startsWith("jfs") ? primaryPic : "jfs/" + primaryPic)
       ),
       productSearchResult: {
         pageCount: 0,
