@@ -1,6 +1,10 @@
 const { app, BrowserWindow, ipcMain, Menu, MenuItem, dialog, shell } = require('electron');
 const path = require('node:path');
 const { ipcHandle } = require("./server/ipcHandle");
+const { autoUpdater } = require("electron-updater");
+const consoleLogUtil = require('./server/utils/consoleLogUtil');
+const { getUserDataProperty } = require("./server/utils/storeUtil");
+const Constants = require("./constant/constants");
 
 function createWindow() {
 	const iconPath = path.join(__dirname, 'public/favicon.png');
@@ -80,7 +84,17 @@ ipcMain.on("toMain", async (e, args) => {
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // 部分 API 在 ready 事件触发后才能使用。
-app.whenReady().then(createWindow);
+app.whenReady().then(function () {
+	createWindow();
+
+	// 查询是否启用自动更新，未查到时，默认自动更新
+	const options = getUserDataProperty(Constants.StoreKeys.OPTIONS_KEY) || {};
+	const enableAutoUpdate = options.enableAutoUpdate;
+	if (enableAutoUpdate === undefined || enableAutoUpdate === null || enableAutoUpdate) {
+		// 检查更新
+		autoUpdater.checkForUpdatesAndNotify();
+	}
+});
 
 // Quit when all windows are closed.
 app.on('window-all-closed', () => {
@@ -97,4 +111,27 @@ app.on('activate', () => {
 	if (BrowserWindow.getAllWindows().length === 0) {
 		createWindow()
 	}
+});
+
+// 应用更新
+autoUpdater.on('checking-for-update', () => {
+	consoleLogUtil.log('Checking for update...');
+})
+autoUpdater.on('update-available', (info) => {
+	consoleLogUtil.log('Update available.');
+})
+autoUpdater.on('update-not-available', (info) => {
+	consoleLogUtil.log('Update not available.');
+})
+autoUpdater.on('error', (err) => {
+	consoleLogUtil.log('Error in auto-updater. ' + err);
+})
+autoUpdater.on('download-progress', (progressObj) => {
+	let log_message = "Download speed: " + (progressObj.bytesPerSecond / 1024).toFixed(2) + " KB/s";
+	log_message = log_message + ' - Downloaded ' + progressObj.percent.toFixed(2) + '%';
+	log_message = log_message + ' (' + progressObj.transferred + "/" + progressObj.total + ')';
+	consoleLogUtil.log(log_message);
+})
+autoUpdater.on('update-downloaded', (info) => {
+	consoleLogUtil.log('Update downloaded');
 });
