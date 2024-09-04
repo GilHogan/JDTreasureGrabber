@@ -20,38 +20,38 @@
       <el-table-column type="index" label="#" width="50"></el-table-column>
       <el-table-column prop="id" label="id" width="100">
         <template #default="scope">
-          <el-tooltip content="设为当前抢购商品，并查看详情" placement="top" :hide-after="0">
-            <span class="product-link" @click="searchItemInfo(scope.row.id)">{{
-              scope.row.id
-            }}</span>
+          <el-tooltip content="在浏览器中查看" placement="top" :hide-after="0">
+            <span class="product-link" @click="handleOpenLink(scope.row.id)">{{
+        scope.row.id
+      }}</span>
           </el-tooltip>
         </template>
       </el-table-column>
       <el-table-column prop="productName" label="名称" width="350">
         <template #default="scope">
           <el-tooltip content="在浏览器中查看" placement="top" :hide-after="0">
-            <span class="product-link" @click="handleGoToProductPage(scope.row.id)">{{ scope.row.productName }}</span>
+            <span class="product-link" @click="handleOpenLink(scope.row.id)">{{ scope.row.productName }}</span>
           </el-tooltip>
         </template>
       </el-table-column>
       <el-table-column label="时间" width="255">
         <template #default="scope">
           <span>{{
-            `${dayjs(scope.row.startTime).format(
-              "YYYY-MM-DD HH:mm:ss"
-            )}~${dayjs(scope.row.endTime).format("YYYY-MM-DD HH:mm:ss")}`
-          }}</span>
+        `${dayjs(scope.row.startTime).format(
+          "YYYY-MM-DD HH:mm:ss"
+        )}~${dayjs(scope.row.endTime).format("YYYY-MM-DD HH:mm:ss")}`
+      }}</span>
         </template>
       </el-table-column>
       <el-table-column label="状态" width="70">
         <template #default="scope">
           <span>{{
-            scope.row.status == 1
-            ? "即将开始"
-            : scope.row.status == 2
-              ? "正在进行"
-              : ""
-          }}</span>
+        scope.row.status == 1
+          ? "即将开始"
+          : scope.row.status == 2
+            ? "正在进行"
+            : ""
+      }}</span>
         </template>
       </el-table-column>
       <el-table-column prop="quality" label="质量" width="70">
@@ -84,7 +84,7 @@ const API = require("../../constant/constants").API;
 
 export default defineComponent({
   name: "ProductList",
-  props: ["setToCurrentBidAndFetchDetail"],
+  props: ["setToCurrentBidAndFetchDetail", "openLink"],
   emits: [],
   setup(props, context) {
     onMounted(() => {
@@ -173,6 +173,9 @@ export default defineComponent({
       },
       searchItemInfo(productId) {
         context.emit("setToCurrentBidAndFetchDetail", productId);
+      },
+      handleOpenLink(productId) {
+        context.emit("openLink", API.item_url + productId);
       },
     });
 

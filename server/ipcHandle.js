@@ -1,6 +1,7 @@
 
 const { goToBid, updateBid, getBidDetail, searchProduct, goToProductPage } = require("./index");
 const { getUserDataProperty, setUserDataJsonProperty } = require("./utils/storeUtil");
+const { openLinkInBrowser } = require("./utils/commonUtil");
 
 async function ipcHandle(e, args) {
     if (!args || !args.event) {
@@ -25,6 +26,8 @@ async function ipcHandle(e, args) {
         data = getUserDataProperty(params);
     } else if (event == "setUserDataJsonProperty") {
         setUserDataJsonProperty(params.key, params.value);
+    } else if (event == "openLink") {
+        openLinkInBrowser(params);
     }
 
 
