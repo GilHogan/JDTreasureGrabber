@@ -15,7 +15,7 @@
 - telegram配置中，bot token和chat id参数的获取[参考](https://medium.com/@ManHay_Hong/how-to-create-a-telegram-bot-and-send-messages-with-python-4cf314d9fa3e)，或自行搜索解决
 - auction.detail请求的curl参数获取方式：
   
-  1. 打开系统的chrome浏览器（不带调试窗口），登录夺宝岛，进入要抢购的商品页面
+  1. 打开系统的chrome浏览器（不带有“受控软件”的相关提示），登录夺宝岛，进入要抢购的商品页面
   2. 按F12打开调试窗口，点击调试窗口中的Network（网络）选项卡
   3. 复制auction.detail请求的curl参考如下图，如果没有看到auction.detail请求，则刷新页面再试：
   4. 把复制的curl粘贴到“auction.detail请求的curl”参数的输入框中进行查询、抢购即可
