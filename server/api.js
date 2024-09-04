@@ -6,6 +6,9 @@ const API = require("../constant/constants").API;
 const { getUserDataProperty } = require("./utils/storeUtil");
 const http = require('http');
 const Constants = require("../constant/constants");
+const curlconverterUtil = require("curlconverter/util");
+const request = require("request");
+const { sendNotice } = require('./utils/noticeUtil');
 
 /**
  * 发出出价的请求
@@ -153,52 +156,56 @@ function fetchBatchInfo(bidId) {
 }
 
 /**
+ * 校验商品详情接口的curl,返回商品id
+ */
+function checkAuctionDetailCurl(auctionDetailCurl) {
+	let auctionId = null;
+	if (!auctionDetailCurl) {
+		sendNotice(`请先设置商品详情接口的curl`);
+		return auctionId;
+	}
+	// curl解析为request请求的传参
+	const curlOptions = curlconverterUtil.parseCurlCommand(auctionDetailCurl);
+
+	if (!curlOptions || !curlOptions.query || !curlOptions.query.body) {
+		sendNotice(`商品详情接口的curl解析失败`);
+		return auctionId;
+	}
+	const curlBody = JSON.parse(decodeURI(curlOptions.query.body));
+	if (!curlBody || !curlBody.auctionId) {
+		sendNotice(`商品详情接口的curl解析失败`);
+		return auctionId;
+	}
+	auctionId = curlBody.auctionId;
+	return auctionId;
+}
+
+/**
  * 获得竞拍标的信息请求
  * */
-function fetchBidDetail(bidId) {
+function fetchBidDetail(auctionDetailCurl) {
+	// 校验商品详情接口的curl
+	if (!checkAuctionDetailCurl(auctionDetailCurl)) {
+		return;
+	}
+	// curl解析为request请求的传参
+	const curlOptions = curlconverterUtil.parseCurlCommand(auctionDetailCurl);
 
 	return new Promise((resolve, reject) => {
-
-		const path = `${API.api_jd_path}?functionId=paipai.auction.detail&t=${new Date().getTime()}&appid=paipai_sale_pc&client=pc&loginType=3&body=${encodeURI("{\"auctionId\":" + bidId + "}")}`;
-		const options = {
-			hostname: API.api_jd_hostname,
-			port: 443,
-			path: path,
-			method: "GET",
-			headers: {
-				"referer": API.web_api_header_referer
-			}
-		};
-
-		const req = https.request(options, (res) => {
-			let rawData = "";
-
-			res.setEncoding('utf8');
-
-			res.on('data', (chunk) => {
-				rawData += chunk;
-			});
-
-			res.on('end', () => {
-				let data = null;
-				try {
-					const parsedData = JSON.parse(rawData);
-					if (parsedData.result && parsedData.result.data) {
-						data = parsedData.result.data;
-					}
-				} catch (e) {
-					consoleUtil.error("fetchBidDetail error:", e.message);
+		request(curlOptions, (error, response, body) => {
+			if (error) {
+				consoleUtil.error(`fetchBidDetail 请求遇到问题: ${error}`);
+				reject(error);
+			} else {
+				const jsonBody = JSON.parse(body);
+				if (response.statusCode == 200) {
+					resolve(jsonBody);
+				} else {
+					consoleUtil.error(`fetchBidDetail 请求遇到问题 statusCode: ${response.statusCode}`);
+					resolve(jsonBody);
 				}
-				resolve(data);
-			});
+			}
 		});
-
-		req.on('error', (e) => {
-			consoleUtil.error(`getBidDetail 请求遇到问题: ${e.message}`);
-			reject(e);
-		});
-
-		req.end();
 	});
 }
 
@@ -304,4 +311,12 @@ function sleep(milliseconds = 10) {
 	});
 }
 
-module.exports = { postOfferPrice, fetchBatchInfo, fetchBidDetail, fetchProduct, loopRequestAvoidCurrentLimiting, sleep };
+module.exports = {
+	postOfferPrice,
+	fetchBatchInfo,
+	fetchBidDetail,
+	fetchProduct,
+	loopRequestAvoidCurrentLimiting,
+	sleep,
+	checkAuctionDetailCurl
+};

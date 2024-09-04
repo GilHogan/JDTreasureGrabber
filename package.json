@@ -1,6 +1,6 @@
 {
 	"name": "JDTreasureGrabber",
-	"version": "0.3.5",
+	"version": "0.4.0",
 	"author": "hogan <hogan01.id@gmail.com> (https://github.com/GilHogan/JDTreasureGrabber)",
 	"description": "京东夺宝岛助手",
 	"private": true,
@@ -22,9 +22,11 @@
 		"@vueuse/core": "^10.7.0",
 		"carlo": "^0.9.46",
 		"core-js": "^3.16.3",
+		"curlconverter": "3.21.0",
 		"dayjs": "^1.11.7",
 		"electron-updater": "^6.1.8",
 		"puppeteer-core": "^20.7.2",
+		"request": "^2.88.2",
 		"vue": "^3.3.11"
 	},
 	"devDependencies": {
