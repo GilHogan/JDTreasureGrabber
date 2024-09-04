@@ -27,6 +27,7 @@ module.exports = {
         image_url: "https://img10.360buyimg.com/",
         get_js_token_url: "https://gia.jd.com/jsTk.do",
         get_user_info_url: "https://used-api.jd.com/common/user/info",
+        detail_function_param: "functionId=paipai.auction.detail"
     },
     BiddingMethodOptions: [
         {

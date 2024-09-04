@@ -1,16 +1,19 @@
 const puppeteer = require('puppeteer-core');
 const findChrome = require('../node_modules/carlo/lib/find_chrome.js');
 const querystring = require("querystring");
-const { postOfferPrice, fetchBatchInfo, fetchBidDetail, fetchProduct, loopRequestAvoidCurrentLimiting, sleep } = require("./api");
+const { postOfferPrice, fetchBatchInfo, fetchBidDetail, fetchProduct,
+	loopRequestAvoidCurrentLimiting, sleep, checkAuctionDetailCurl } = require("./api");
 const dayjs = require('dayjs');
 const Constants = require("../constant/constants");
 const consoleUtil = require('./utils/consoleLogUtil');
 const { sendNotice } = require('./utils/noticeUtil');
 const { getUserData, setUserDataProperty } = require('./utils/storeUtil');
 const API = Constants.API;
+const { interceptHandler } = require('./utils/requestIntercept');
 
 // 商品的ID
 let Item_ID;
+let AuctionDetailCurl;
 
 // 最高能接受的价格
 let MaxPrice;
@@ -49,7 +52,7 @@ let OfferPriceBack;
  * 启动浏览器，加载页面
  * */
 function goToBid(params) {
-	const { id, price, bidder, markup, lastBidCountdownTime, biddingMethod, minPrice, offerPriceBack } = params;
+	const { auctionDetailCurl, price, bidder, markup, lastBidCountdownTime, biddingMethod, minPrice, offerPriceBack } = params;
 	if (Browser && Browser.isConnected()) {
 		if (isLogin) {
 			handleSendNotice("抢购已开始");
@@ -57,10 +60,14 @@ function goToBid(params) {
 		}
 	}
 
+	// 校验商品详情接口的curl,返回商品id
+	const id = checkAuctionDetailCurl(auctionDetailCurl);
+
 	// 初始化参数
 	resetData();
 
 	Item_ID = id;
+	AuctionDetailCurl = auctionDetailCurl;
 	MaxPrice = price;
 	MinPrice = minPrice;
 	Item_URL = API.item_url + Item_ID;
@@ -77,12 +84,15 @@ function goToBid(params) {
  * 更新
  * */
 async function updateBid(params) {
-	const { id, price, bidder, markup, lastBidCountdownTime, biddingMethod, minPrice, offerPriceBack } = params;
+	const { auctionDetailCurl, price, bidder, markup, lastBidCountdownTime, biddingMethod, minPrice, offerPriceBack } = params;
 
 	if (!isLogin) {
 		handleSendNotice("请先点击开始抢购，并登录");
 		return;
 	}
+
+	// 校验商品详情接口的curl,返回商品id
+	const id = checkAuctionDetailCurl(auctionDetailCurl);
 
 	if (page && Browser) {
 		// 初始化参数
@@ -90,6 +100,7 @@ async function updateBid(params) {
 
 		// 更新参数
 		Item_ID = id;
+		AuctionDetailCurl = auctionDetailCurl;
 		MaxPrice = price;
 		MinPrice = minPrice;
 		Item_URL = API.item_url + Item_ID;
@@ -100,6 +111,8 @@ async function updateBid(params) {
 		OfferPriceBack = offerPriceBack;
 
 		consoleUtil.log("updateBid Item_URL = ", Item_URL, Item_ID, MaxPrice, MinPrice, Bidder, Markup, LastBidCountdownTime, BiddingMethod, OfferPriceBack);
+		// 因为页面会查询商品失败，所以通过内部接口请求商品详情
+		global.AuctionDetailRes = await fetchBidDetail(AuctionDetailCurl);
 
 		if (!page.isClosed()) {
 			// 关闭之前的页面
@@ -108,6 +121,8 @@ async function updateBid(params) {
 			await page.close();
 		}
 		page = await Browser.newPage();
+		// 拦截页面请求的处理
+		interceptHandler(page);
 
 		consoleUtil.log("updateBid page = ", page)
 
@@ -123,9 +138,12 @@ async function updateBid(params) {
  * */
 async function initBid() {
 
+	// 因为页面会查询商品失败，所以通过内部接口请求商品详情
+	global.AuctionDetailRes = await fetchBidDetail(AuctionDetailCurl);
 	await initBrowser();
-
 	page = await Browser.newPage();
+	// 拦截页面请求的处理
+	interceptHandler(page);
 
 	consoleUtil.log("initBid page = ", page);
 
@@ -205,7 +223,10 @@ async function initBrowser() {
 	Browser = await puppeteer.launch({
 		executablePath,
 		headless: false,
-		defaultViewport: null
+		defaultViewport: null,
+		args: [
+			'--disable-web-security',
+		],
 	});
 
 	Browser.on("disconnected", () => {
@@ -261,7 +282,7 @@ async function handleGoToTargetPage() {
 	setUserDataProperty(Constants.StoreKeys.COOKIES_KEY, page_cookie);
 
 	// 查询商品详情
-	ProductDetail = await loopRequestAvoidCurrentLimiting(() => getBidDetail(Item_ID));
+	ProductDetail = await loopRequestAvoidCurrentLimiting(() => getBidDetail(AuctionDetailCurl));
 	if (!ProductDetail || !ProductDetail.auctionInfo || !ProductDetail.auctionInfo.startTime || !ProductDetail.currentTime) {
 		handleSendNotice(`商品详情获取失败，请检查`, true);
 		resetData();
@@ -365,6 +386,8 @@ async function waitForProductStart() {
 								}, waitMilliseconds)
 							});
 							if (page) {
+								// 更新商品详情接口请求结果
+								global.AuctionDetailRes = await fetchBidDetail(AuctionDetailCurl);
 								consoleUtil.log("page start reload.", dayjs().format('YYYY-MM-DD HH:mm:ss'));
 								// 商品开始抢购时刷新页面，解决页面倒计时不准确，导致出价按钮更新不及时的问题
 								await page.reload();
@@ -688,10 +711,13 @@ function mergeCookie(cookie_one, cookie_two) {
 /**
  * 获得竞拍标的信息
  * */
-async function getBidDetail(bidId) {
+async function getBidDetail(auctionDetailCurl) {
 	let data = null;
 	try {
-		data = await fetchBidDetail(bidId);
+		const res = await fetchBidDetail(auctionDetailCurl);
+		if (res.result && res.result.data) {
+			data = res.result.data;
+		}
 	} catch (e) {
 		consoleUtil.error("getBidDetail error:", e.message);
 	}
