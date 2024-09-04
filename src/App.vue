@@ -16,7 +16,7 @@
     </el-row>
     <el-row class="app-under">
       <el-col :span="24">
-        <ProductList @setToCurrentBidAndFetchDetail="setToCurrentBidAndFetchDetail" />
+        <ProductList @setToCurrentBidAndFetchDetail="setToCurrentBidAndFetchDetail" @openLink="openLink"/>
       </el-col>
     </el-row>
   </div>
@@ -64,11 +64,12 @@ export default defineComponent({
             params,
           });
       },
-      fetchBidDetail(id) {
+      fetchBidDetail(auctionDetailCurl) {
         window.ipc &&
           window.ipc
-            .sendInvoke("toMain", { event: "fetchBidDetail", params: id })
+            .sendInvoke("toMain", { event: "fetchBidDetail", params: auctionDetailCurl })
             .then((data) => {
+              console.log("App fetchBidDetail data = ", data)
               if (data) {
                 dataMap.historyData = data.historyRecord || [];
                 dataMap.info = data;
@@ -91,6 +92,13 @@ export default defineComponent({
           dataMap.itemInfoRef.setToCurrentBid(id);
           dataMap.fetchBidDetail(id);
         }
+      },
+      openLink(params) {
+        window.ipc &&
+          window.ipc.send("toMain", {
+            event: "openLink",
+            params,
+          });
       },
     });
 
