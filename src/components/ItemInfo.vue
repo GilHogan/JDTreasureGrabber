@@ -5,15 +5,11 @@
     </el-dialog>
 
     <el-form :inline="true" ref="formRef" :model="form" label-width="70px" :rules="rules" size="small">
-      <el-form-item prop="id" label="商品ID" :rules="[
-        { required: true, message: '请输入商品ID', trigger: 'blur' },
-        {
-          type: 'number',
-          message: '商品ID必须为数字值',
-          trigger: 'blur',
-        },
-      ]">
-        <el-input size="small" v-model.number="form.id" placeholder="商品ID" input-style="width: 65px"></el-input>
+      <el-form-item prop="auctionDetailCurl" label="auction.detail请求的curl" label-width="150px" :rules="[
+      { required: true, message: '请输入auction.detail请求的curl', trigger: 'blur' }
+    ]">
+        <el-input size="small" v-model.number="form.auctionDetailCurl" placeholder="auction.detail请求的curl"
+          input-style="width: 180px"></el-input>
       </el-form-item>
       <el-form-item label="抢购方式">
         <el-select size="small" v-model="form.biddingMethod" style="width: 100px">
@@ -23,8 +19,9 @@
         </el-select>
       </el-form-item>
       <el-form-item prop="minPrice" v-show="form.biddingMethod === Constants.BiddingMethod.WITHIN_PRICE_RANGE
-        ">
-        <el-input size="small" v-model.number="form.minPrice" placeholder="最低价格(元)" input-style="width: 75px"></el-input>
+      ">
+        <el-input size="small" v-model.number="form.minPrice" placeholder="最低价格(元)"
+          input-style="width: 75px"></el-input>
       </el-form-item>
       <el-form-item prop="price" v-show="form.biddingMethod !== Constants.BiddingMethod.ON_OTHERS_BID">
         <el-input size="small" v-model.number="form.price" placeholder="最高价格(元)" input-style="width: 75px"></el-input>
@@ -34,7 +31,8 @@
         <el-input-number size="small" v-model="form.markup" :min="1" label="加价幅度(元)"></el-input-number>
       </el-form-item>
       <el-form-item prop="lastBidCountdownTime" label="最后出价倒数时间(毫秒)" label-width="150px">
-        <el-input-number size="small" v-model="form.lastBidCountdownTime" :min="1" label="最后出价倒数时间(毫秒)"></el-input-number>
+        <el-input-number size="small" v-model="form.lastBidCountdownTime" :min="1"
+          label="最后出价倒数时间(毫秒)"></el-input-number>
       </el-form-item>
       <el-form-item prop="offerPriceBack" label="后台出价">
         <el-switch v-model="form.offerPriceBack"></el-switch>
@@ -142,6 +140,7 @@ export default defineComponent({
         biddingMethod: Constants.BiddingMethod.ONE_TIME_BID,
         minPrice: undefined,
         offerPriceBack: false,
+        auctionDetailCurl: null
       },
       rules: {
         price: { validator: validatePrice, trigger: "blur" },
@@ -150,9 +149,9 @@ export default defineComponent({
       optionVisible: false,
       Constants,
       searchItemInfo() {
-        dataMap.formRef.validateField("id", (valid) => {
+        dataMap.formRef.validateField("auctionDetailCurl", (valid) => {
           if (valid) {
-            context.emit("fetchBidDetail", dataMap.form.id);
+            context.emit("fetchBidDetail", dataMap.form.auctionDetailCurl);
           } else {
             return false;
           }
