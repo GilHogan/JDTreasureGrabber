@@ -15,7 +15,7 @@
 - telegram配置中，bot token和chat id参数的获取[参考](https://medium.com/@ManHay_Hong/how-to-create-a-telegram-bot-and-send-messages-with-python-4cf314d9fa3e)，或自行搜索解决
 - auction.detail请求的curl参数获取方式：
   
-  1. 打开系统的chrome浏览器（不带有“受控软件”的相关提示），登录夺宝岛，进入要抢购的商品页面
+  1. 打开系统的chrome浏览器（不带有“受控软件”的相关提示），进入要抢购的商品页面
   2. 按F12打开调试窗口，点击调试窗口中的Network（网络）选项卡
   3. 复制auction.detail请求的curl参考如下图，如果没有看到auction.detail请求，则刷新页面再试：
   4. 把复制的curl粘贴到“auction.detail请求的curl”参数的输入框中进行查询、抢购即可
@@ -59,53 +59,3 @@
   ```
 
 - arm架构的系统构建方式参考，[参考1](https://github.com/jordansissel/fpm/issues/1801#issuecomment-919877499)，[参考2](https://www.beekeeperstudio.io/blog/electron-apps-for-arm-and-raspberry-pi)
-
-## 更新日志📆
-
-### 0.3.5
-- 修复商品列表图片加载失败问题
-- 添加自动更新功能（MacOS暂不支持）
-
-### 0.3.4
-- 桌面通知开关
-- 新增后台出价模式
-- 可配置出价接口eid参数
-- 菜单栏添加项目信息
-
-### 0.3.3
-- 减少：循环刷新页面导致的围观次数无意义的增长
-- 优化：频繁发送请求，导致京东接口限流的处理
-- 商品搜索列表排序优化
-- 查询单个商品时仅校验商品id
-- 京东出价接口可配置代理
-- 可配置默认抢购方式，默认加价幅度和默认出价时间
-
-### 0.3.2
-- 添加自动登录功能
-- 商品信息部分ui优化
-- 2023年即将过去，预祝大家元旦快乐 🎉🎉🎉
-
-### 0.3.1
-- arm架构下，主进程console.log抛异常修复
-- 添加Telegram通知功能
-- 修复商品列表起拍价数据错误问题
-- 添加低于起拍价的校验
-
-### 0.3.0
-
-- 模块升级 vue2->vue3
-- 主进程与渲染进程通信方式优化，提升安全性
-- 抢购方式分类
-- 新增暗黑主题；ui 排版优化
-- 切换分页页码后列表自动滚动到顶部
-- 支持不输入商品名称进行全商品浏览
-- 点击商品搜索列表中的商品 id 可直接查询商品详情
-
-### 0.2.15
-
-- 修复 linux 应用图标不显示问题
-- 添加 linux-arm64 release 包
-
-### v0.2.14
-
-- 初版
