@@ -22,7 +22,6 @@ function getUrlParams(url) {
  * 在浏览器中打开链接
  */
 function openLinkInBrowser(url) {
-    console.log("openLinkInBrowser ", url)
     shell.openExternal(url);
 }
 
