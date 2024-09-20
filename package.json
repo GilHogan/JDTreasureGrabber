@@ -6,7 +6,7 @@
 	"private": true,
 	"main": "main.js",
 	"engines": {
-		"node": ">=16.3.0 <=16.20.1"
+		"node": "18"
 	},
 	"scripts": {
 		"serve": "vue-cli-service serve",
