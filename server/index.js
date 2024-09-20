@@ -557,22 +557,23 @@ async function buyByPage(price) {
 	if (!page) {
 		return;
 	}
-	const inputSelector = '.auction-choose-amount .el-input__inner';
-	// 定位到包含 auction-choose-amount 类的 div 元素，并找到其中的 input 元素
-	const inputElement = await page.$(inputSelector);
-	// 选中输入框
-	await inputElement.click();
-	// 将光标移动到文本末尾
-	await page.keyboard.down('End');
-	// 循环删除输入框所有文本
-	while (await page.$eval(inputSelector, el => el.value) !== '') {
-		await page.keyboard.press('Backspace');
-	}
-	// 修改输入框的出价价格
-	await inputElement.type(price.toString());
 	try {
+		const inputSelector = '.auction-choose-amount .el-input__inner';
+		// 定位到包含 auction-choose-amount 类的 div 元素，并找到其中的 input 元素
+		const inputElement = await page.$(inputSelector);
+		// 选中输入框
+		await inputElement.click();
+		// 将光标移动到文本末尾
+		await page.keyboard.down('End');
+		// 循环删除输入框所有文本
+		while (await page.$eval(inputSelector, el => el.value) !== '') {
+			await page.keyboard.press('Backspace');
+		}
+		// 修改输入框的出价价格
+		await inputElement.type(price.toString());
 		// 点击按钮立即出价
-		await page.click("#InitCartUrl");
+		const bidButton = await page.$("#InitCartUrl");
+		bidButton.click();
 	} catch (e) {
 		consoleUtil.log("buyByPage error: ", e.message)
 	}
