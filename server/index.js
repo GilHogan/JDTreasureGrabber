@@ -557,14 +557,21 @@ async function buyByPage(price) {
 	if (!page) {
 		return;
 	}
-	// 点击输入框右边，以便光标能在最右边，删除键能删除所有的输入
-	await page.mouse.click(1000, 492);
-	await page.keyboard.press('Backspace');
-	await page.keyboard.press('Backspace');
-	await page.keyboard.press('Backspace');
-	await page.keyboard.press('Backspace');
-	await page.keyboard.type(price.toString());
+	const inputSelector = '.auction-choose-amount .el-input__inner';
+	// 定位到包含 auction-choose-amount 类的 div 元素，并找到其中的 input 元素
+	const inputElement = await page.$(inputSelector);
+	// 选中输入框
+	await inputElement.click();
+	// 将光标移动到文本末尾
+	await page.keyboard.down('End');
+	// 循环删除输入框所有文本
+	while (await page.$eval(inputSelector, el => el.value) !== '') {
+		await page.keyboard.press('Backspace');
+	}
+	// 修改输入框的出价价格
+	await inputElement.type(price.toString());
 	try {
+		// 点击按钮立即出价
 		await page.click("#InitCartUrl");
 	} catch (e) {
 		consoleUtil.log("buyByPage error: ", e.message)
@@ -682,7 +689,7 @@ async function handleLastMinuteBuy(time) {
 				// await buyByAPI(bidPrice);
 				await buyByPage(bidPrice);
 			}
-			await sleep(currentRemainTime + 1000);
+			await sleep(currentRemainTime + 5000);
 			// 最后再获取商品信息，查看竞拍结果
 			getBatchInfo().then(() => {
 				// 出价后，最后一次查询商品信息，发送通知消息
@@ -715,14 +722,14 @@ function mergeCookie(cookie_one, cookie_two) {
 	return string;
 }
 
-async function getBidDetail () {
+async function getBidDetail() {
 
 }
 
 /**
  * 浏览器中获得竞拍标的信息
  * */
-async function getBidDetailFromBrowser (id) {
+async function getBidDetailFromBrowser(id) {
 	if (!page) {
 		return;
 	}

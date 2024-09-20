@@ -30,7 +30,7 @@
       <el-table-column prop="productName" label="名称" width="350">
         <template #default="scope">
           <el-tooltip content="在浏览器中查看" placement="top" :hide-after="0">
-            <span class="product-link" @click="handleGoToProductPage(scope.row.id)">{{ scope.row.productName }}</span>
+            <span class="product-link" @click="handleOpenLink(scope.row.id)">{{ scope.row.productName }}</span>
           </el-tooltip>
         </template>
       </el-table-column>
