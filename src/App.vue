@@ -16,7 +16,7 @@
     </el-row>
     <el-row class="app-under">
       <el-col :span="24">
-        <ProductList @setToCurrentBidAndFetchDetail="setToCurrentBidAndFetchDetail" @openLink="openLink"/>
+        <ProductList @setToCurrentBidAndFetchDetail="setToCurrentBidAndFetchDetail" @openLink="openLink" @setToCurrentBid="setToCurrentBid"/>
       </el-col>
     </el-row>
   </div>
@@ -45,9 +45,20 @@ export default defineComponent({
     onMounted(() => {
       if (window.ipc) {
         window.ipc.receive("fromMain", (data) => {
-          if (data && data.event && data.event == "console") {
-            // 打印主进程日志
-            console.log(data.data);
+          if (data && data.event ) {
+            if (data.event == "console") {
+              // 打印主进程日志
+              console.log(data.data);
+            } else if (data.event == "auction.detail") {
+              // 更新商品信息
+              if (data.data) {
+                dataMap.historyData = data.data.historyRecord || [];
+                dataMap.info = data.data;
+              } else {
+                dataMap.historyData = [];
+                dataMap.info = [];
+              }
+            }
           }
         });
       }
@@ -100,6 +111,11 @@ export default defineComponent({
             params,
           });
       },
+      setToCurrentBid(id) {
+        if (id) {
+          dataMap.itemInfoRef.setToCurrentBid(id);
+        }
+      }
     });
 
     return {
