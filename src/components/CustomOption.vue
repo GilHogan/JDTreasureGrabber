@@ -27,7 +27,7 @@
     <el-form-item label="默认出价时间(毫秒)">
       <el-input-number v-model="form.defaultLastBidCountdownTime" :min="1" label="默认最后出价倒数时间(毫秒)"></el-input-number>
     </el-form-item>
-    <el-form-item label="默认后台出价">
+    <!-- <el-form-item label="默认后台出价">
       <el-col :span="3">
         <el-row justify="start">
           <el-switch v-model="form.defaultOfferPriceBack" inline-prompt active-text="启用" inactive-text="关闭"></el-switch>
@@ -38,7 +38,7 @@
           <span>启用后台出价时，关闭浏览器抢购任务会继续执行</span>
         </el-row>
       </el-col>
-    </el-form-item>
+    </el-form-item> -->
     <el-form-item label="Telegram通知">
       <el-col :span="3">
         <el-row justify="start">
@@ -116,7 +116,7 @@
         </el-row>
       </el-col>
     </el-form-item>
-    <el-form-item label="自定义出价接口eid">
+    <!-- <el-form-item label="自定义出价接口eid">
       <el-col :span="3">
         <el-row justify="start">
           <el-switch v-model="form.enableCustomEid" inline-prompt active-text="启用" inactive-text="关闭"></el-switch>
@@ -132,7 +132,7 @@
           </el-col>
         </el-row>
       </el-col>
-    </el-form-item>
+    </el-form-item> -->
   </el-form>
 
   <el-row justify="center">

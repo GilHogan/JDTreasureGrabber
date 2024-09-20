@@ -20,8 +20,8 @@
       <el-table-column type="index" label="#" width="50"></el-table-column>
       <el-table-column prop="id" label="id" width="100">
         <template #default="scope">
-          <el-tooltip content="在浏览器中查看" placement="top" :hide-after="0">
-            <span class="product-link" @click="handleOpenLink(scope.row.id)">{{
+          <el-tooltip content="设为当前抢购商品" placement="top" :hide-after="0">
+            <span class="product-link" @click="handleSetToCurrentBid(scope.row.id)">{{
         scope.row.id
       }}</span>
           </el-tooltip>
@@ -84,7 +84,7 @@ const API = require("../../constant/constants").API;
 
 export default defineComponent({
   name: "ProductList",
-  props: ["setToCurrentBidAndFetchDetail", "openLink"],
+  props: ["setToCurrentBidAndFetchDetail", "openLink", "setToCurrentBid"],
   emits: [],
   setup(props, context) {
     onMounted(() => {
@@ -176,6 +176,9 @@ export default defineComponent({
       },
       handleOpenLink(productId) {
         context.emit("openLink", API.item_url + productId);
+      },
+      handleSetToCurrentBid(productId) {
+        context.emit("setToCurrentBid", productId);
       },
     });
 
