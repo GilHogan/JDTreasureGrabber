@@ -5,11 +5,15 @@
     </el-dialog>
 
     <el-form :inline="true" ref="formRef" :model="form" label-width="70px" :rules="rules" size="small">
-      <el-form-item prop="auctionDetailCurl" label="auction.detail请求的curl" label-width="150px" :rules="[
-      { required: true, message: '请输入auction.detail请求的curl', trigger: 'blur' }
-    ]">
-        <el-input size="small" v-model.number="form.auctionDetailCurl" placeholder="auction.detail请求的curl"
-          input-style="width: 180px"></el-input>
+      <el-form-item prop="id" label="商品ID" :rules="[
+        { required: true, message: '请输入商品ID', trigger: 'blur' },
+        {
+          type: 'number',
+          message: '商品ID必须为数字值',
+          trigger: 'blur',
+        },
+      ]">
+        <el-input size="small" v-model.number="form.id" placeholder="商品ID" input-style="width: 65px"></el-input>
       </el-form-item>
       <el-form-item label="抢购方式">
         <el-select size="small" v-model="form.biddingMethod" style="width: 100px">
@@ -34,16 +38,16 @@
         <el-input-number size="small" v-model="form.lastBidCountdownTime" :min="1"
           label="最后出价倒数时间(毫秒)"></el-input-number>
       </el-form-item>
-      <el-form-item prop="offerPriceBack" label="后台出价">
+      <!-- <el-form-item prop="offerPriceBack" label="后台出价">
         <el-switch v-model="form.offerPriceBack"></el-switch>
-      </el-form-item>
+      </el-form-item> -->
     </el-form>
   </el-row>
   <el-row justify="center">
     <el-form :inline="true" label-width="70px">
-      <el-form-item>
+      <!-- <el-form-item>
         <el-button type="primary" size="small" @click="searchItemInfo">查询当前商品</el-button>
-      </el-form-item>
+      </el-form-item> -->
       <el-form-item>
         <el-button type="primary" size="small" @click="goToDid">开始抢购</el-button>
       </el-form-item>
@@ -67,7 +71,7 @@ export default defineComponent({
   components: {
     CustomOption,
   },
-  emits: ["fetchBidDetail", "go-to-bid", "update-bid"],
+  emits: ["fetchBidDetail", "go-to-bid", "update-bid", "setToCurrentBid"],
   setup(props, context) {
     onMounted(() => {
       if (window.ipc) {
@@ -78,7 +82,8 @@ export default defineComponent({
               dataMap.form.lastBidCountdownTime = data.defaultLastBidCountdownTime || 300;
               dataMap.form.markup = data.defaultMarkup || 2;
               dataMap.form.biddingMethod = data.defaultBiddingMethod || Constants.BiddingMethod.ONE_TIME_BID;
-              dataMap.form.offerPriceBack = data.defaultOfferPriceBack || false;
+              // dataMap.form.offerPriceBack = data.defaultOfferPriceBack || false;
+              dataMap.form.offerPriceBack = false;
             }
           })
           .catch((e) => console.log("getUserData error = ", e));
@@ -149,9 +154,9 @@ export default defineComponent({
       optionVisible: false,
       Constants,
       searchItemInfo() {
-        dataMap.formRef.validateField("auctionDetailCurl", (valid) => {
+        dataMap.formRef.validateField("id", (valid) => {
           if (valid) {
-            context.emit("fetchBidDetail", dataMap.form.auctionDetailCurl);
+            context.emit("fetchBidDetail", dataMap.form.id);
           } else {
             return false;
           }
