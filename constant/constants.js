@@ -43,4 +43,17 @@ module.exports = {
             label: "一口价",
         },
     ],
+    // 抢购状态
+    ShoppingStatus: {
+        // 未开始
+        PENDING: 1,
+        // 进行中
+        IN_PROGRESS: 2,
+        // 未获拍
+        FAILED: 3,
+        // 已获拍
+        SUCCESS: 4,
+        // 异常
+        ERROR: 5,
+    }
 }

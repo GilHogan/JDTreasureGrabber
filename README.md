@@ -27,6 +27,7 @@
 
 <img alt='review' src="assets\images\preview.png" width="60%" style="">
 <img alt='review' src="assets\images\preview2.png" width="60%" style="">
+<img alt='review' src="assets\images\preview3.png" width="60%" style="">
 <img alt='review' src="assets\images\preview_telegram.png" width="60%" style="">
 
 ## 开发相关🐵
