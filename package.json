@@ -1,6 +1,6 @@
 {
 	"name": "JDTreasureGrabber",
-	"version": "0.4.1",
+	"version": "0.5.0",
 	"author": "hogan <hogan01.id@gmail.com> (https://github.com/GilHogan/JDTreasureGrabber)",
 	"description": "京东夺宝岛助手",
 	"private": true,
@@ -29,6 +29,7 @@
 		"puppeteer-extra": "^3.3.6",
 		"puppeteer-extra-plugin-stealth": "^2.11.2",
 		"request": "^2.88.2",
+		"sortablejs": "^1.15.6",
 		"user-agents": "^1.1.325",
 		"vue": "^3.3.11"
 	},
@@ -40,7 +41,7 @@
 		"babel-plugin-component": "^1.1.1",
 		"electron": "^25.1.1",
 		"electron-builder": "^24.4.0",
-		"element-plus": "^2.4.3",
+		"element-plus": "^2.9.3",
 		"eslint": "^7.32.0",
 		"eslint-plugin-vue": "^9.19.2"
 	},

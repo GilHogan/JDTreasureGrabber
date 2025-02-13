@@ -10,7 +10,7 @@ function createWindow() {
 	const iconPath = path.join(__dirname, 'public/favicon.png');
 	// 创建浏览器窗口
 	const win = new BrowserWindow({
-		width: 1350,
+		width: 1440,
 		height: 800,
 		webPreferences: {
 			nodeIntegration: false,
