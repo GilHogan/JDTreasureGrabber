@@ -2,21 +2,17 @@
   <div id="app">
     <el-row class="app-above">
       <el-col :span="24" class="app-above__col">
-        <item-info @go-to-bid="goToBid" @fetchBidDetail="fetchBidDetail" @update-bid="updateBid" ref="itemInfoRef">
-        </item-info>
+        <ShoppingSetting @go-to-bid="goToBid" @update-bid="updateBid" />
         <el-row>
-          <el-col :span="12">
-            <history-price :history-data="historyData"> </history-price>
-          </el-col>
-          <el-col :span="11" style="margin-left: 20px">
-            <bid-info :info="info" :historyData="historyData"></bid-info>
+          <el-col :span="24">
+            <ShoppingList @openLink="openLink" ref="shoppingListRef" />
           </el-col>
         </el-row>
       </el-col>
     </el-row>
     <el-row class="app-under">
       <el-col :span="24">
-        <ProductList @setToCurrentBidAndFetchDetail="setToCurrentBidAndFetchDetail" @openLink="openLink" @setToCurrentBid="setToCurrentBid"/>
+        <ProductList @addToShoppingList="addToShoppingList" @openLink="openLink" />
       </el-col>
     </el-row>
   </div>
@@ -24,11 +20,10 @@
 
 <script>
 import { defineComponent, reactive, onMounted, toRefs } from "vue";
-import ItemInfo from "./components/ItemInfo";
-import HistoryPrice from "./components/HistoryPrice";
-import BidInfo from "./components/BidInfo";
+import ShoppingSetting from "./components/ShoppingSetting";
 import ProductList from "./components/ProductList";
 import { useDark } from "@vueuse/core";
+import ShoppingList from "./components/ShoppingList";
 
 // 设置初始化主题模式
 useDark();
@@ -36,28 +31,26 @@ useDark();
 export default defineComponent({
   name: "App",
   components: {
-    BidInfo,
-    HistoryPrice,
-    ItemInfo,
+    ShoppingSetting,
     ProductList,
+    ShoppingList,
   },
   setup() {
     onMounted(() => {
       if (window.ipc) {
         window.ipc.receive("fromMain", (data) => {
           if (data && data.event ) {
-            if (data.event == "console") {
+            if (data.event === "console") {
               // 打印主进程日志
               console.log(data.data);
-            } else if (data.event == "auction.detail") {
+            } else if (data.event === "update.shopping.item") {
               // 更新商品信息
               if (data.data) {
-                dataMap.historyData = data.data.historyRecord || [];
-                dataMap.info = data.data;
-              } else {
-                dataMap.historyData = [];
-                dataMap.info = [];
+                dataMap.shoppingListRef.updateShoppingItem(data.data);
               }
+            } else if (data.event === "update.process.status") {
+              // 更新执行状态
+              dataMap.shoppingListRef.updateProcessStatus(data.data);
             }
           }
         });
@@ -65,57 +58,38 @@ export default defineComponent({
     });
 
     const dataMap = reactive({
-      historyData: [],
-      info: [],
-      itemInfoRef: null,
-      goToBid(params) {
-        window.ipc &&
-          window.ipc.send("toMain", {
-            event: "startBid",
-            params,
+      shoppingListRef: null,
+      async goToBid(params) {
+        // 先校验列表数据
+        const valid = await dataMap.shoppingListRef.validateForm();
+        if (valid) {
+          const shoppingList = dataMap.shoppingListRef.getShoppingListBeforeBid(params.lastBidCountdownTime);
+          const paramsStr = JSON.stringify({ shoppingList, enableStopOnSuccess: params.enableStopOnSuccess });
+          window.ipc && window.ipc.send("toMain", {
+            event: "startProcessShoppingList",
+            params: paramsStr
           });
+        }
       },
-      fetchBidDetail(auctionDetailCurl) {
-        window.ipc &&
-          window.ipc
-            .sendInvoke("toMain", { event: "fetchBidDetail", params: auctionDetailCurl })
-            .then((data) => {
-              console.log("App fetchBidDetail data = ", data)
-              if (data) {
-                dataMap.historyData = data.historyRecord || [];
-                dataMap.info = data;
-              } else {
-                dataMap.historyData = [];
-                dataMap.info = [];
-              }
-            })
-            .catch((e) => console.log("App fetchBidDetail error = ", e));
-      },
-      updateBid(params) {
-        window.ipc &&
-          window.ipc.send("toMain", {
-            event: "startUpdateBid",
-            params,
+      async updateBid(params) {
+        const valid = await dataMap.shoppingListRef.validateForm();
+        if (valid) {
+          const shoppingList = dataMap.shoppingListRef.getShoppingListBeforeBid(params.lastBidCountdownTime);
+          const paramsStr = JSON.stringify({ shoppingList, enableStopOnSuccess: params.enableStopOnSuccess });
+          window.ipc && window.ipc.send("toMain", {
+            event: "updateProcessShoppingList",
+            params: paramsStr
           });
+        }
       },
-      setToCurrentBidAndFetchDetail(id) {
-        if (id) {
-          dataMap.itemInfoRef.setToCurrentBid(id);
-          dataMap.fetchBidDetail(id);
+      addToShoppingList(productInfo) {
+        if (productInfo) {
+          dataMap.shoppingListRef.addItem(productInfo);
         }
       },
       openLink(params) {
-        window.ipc &&
-          window.ipc.send("toMain", {
-            event: "openLink",
-            params,
-          });
+        window.ipc && window.ipc.send("toMain", { event: "openLink", params, });
       },
-      setToCurrentBid(id) {
-        if (id) {
-          dataMap.itemInfoRef.setToCurrentBid(id);
-        }
-      }
     });
 
     return {
@@ -150,7 +124,19 @@ export default defineComponent({
 
 .app-title {
   text-align: left;
-  font-size: 16;
+  font-size: 16px;
   font-weight: 700;
 }
+
+.item-title {
+  text-align: left;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.product-link {
+  cursor: pointer;
+  color: #2f81f7;
+}
+
 </style>
