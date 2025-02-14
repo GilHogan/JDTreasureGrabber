@@ -4,7 +4,7 @@
       <HistoryPrice :auctionDetail="selectHistoryRow.auctionDetail"/>
     </el-dialog>
 
-    <div class="item-title">{{ `抢购列表（顺序执行 - ${processStatusMsg || ""}）` }}</div>
+    <div class="item-title">{{ `抢购列表（顺序执行状态：${processStatusMsg || "-"}）` }}</div>
     <el-form :inline="true" ref="formRef" :model="shoppingList" size="small">
       <el-table :data="shoppingList" border height="200" size="small" ref="tableRef" row-key="key">
         <el-table-column type="index" label="拖动排序" width="65">
@@ -144,6 +144,7 @@
       </el-table>
     </el-form>
     <el-button type="primary" size="small" @click="addItem" style="margin-top: 10px;">添加商品</el-button>
+    <el-button type="primary" size="small" @click="clearItemList" style="margin-top: 10px;">清空列表</el-button>
   </div>
 </template>
 
@@ -152,6 +153,7 @@ import { computed, defineComponent, nextTick, onMounted, reactive, toRefs } from
 import { Operation, Warning } from '@element-plus/icons-vue'
 import Constants, { API } from "../../constant/constants";
 import HistoryPrice from "./HistoryPrice";
+import { ElMessage } from 'element-plus';
 
 const dayjs = require("dayjs");
 
@@ -311,8 +313,12 @@ export default defineComponent({
           inputEl.focus()
         })
       },
-      validateForm() {
-        return dataMap.formRef.validate((valid) => valid);
+      async validateForm() {
+        const valid = await dataMap.formRef.validate((valid) => valid);
+        if (!valid) {
+          ElMessage({ message: '列表数据校验失败，请检查', type: 'warning' });
+        }
+        return valid;
       },
       getShoppingList(lastBidCountdownTime = 300) {
         dataMap.shoppingList.forEach(item => {
@@ -391,6 +397,16 @@ export default defineComponent({
       },
       updateProcessStatus(msg) {
         dataMap.processStatusMsg = msg;
+      },
+      addItemList(itemList) {
+        if (itemList && itemList.length > 0) {
+          itemList.forEach(item => {
+            dataMap.addItem(item);
+          })
+        }
+      },
+      clearItemList() {
+        dataMap.shoppingList = [];
       },
     })
 
