@@ -2,17 +2,18 @@
   <div id="app">
     <el-row class="app-above">
       <el-col :span="24" class="app-above__col">
-        <ShoppingSetting @go-to-bid="goToBid" @update-bid="updateBid" />
+        <ShoppingSetting @go-to-bid="goToBid" @update-bid="updateBid"/>
         <el-row>
           <el-col :span="24">
-            <ShoppingList @openLink="openLink" ref="shoppingListRef" />
+            <ShoppingList @openLink="openLink" ref="shoppingListRef"/>
           </el-col>
         </el-row>
       </el-col>
     </el-row>
     <el-row class="app-under">
       <el-col :span="24">
-        <ProductList @addToShoppingList="addToShoppingList" @openLink="openLink" />
+        <ProductList @addToShoppingList="addToShoppingList" @openLink="openLink"
+                     @addAllToShoppingList="addAllToShoppingList"/>
       </el-col>
     </el-row>
   </div>
@@ -39,7 +40,7 @@ export default defineComponent({
     onMounted(() => {
       if (window.ipc) {
         window.ipc.receive("fromMain", (data) => {
-          if (data && data.event ) {
+          if (data && data.event) {
             if (data.event === "console") {
               // 打印主进程日志
               console.log(data.data);
@@ -89,6 +90,9 @@ export default defineComponent({
       },
       openLink(params) {
         window.ipc && window.ipc.send("toMain", { event: "openLink", params, });
+      },
+      addAllToShoppingList(itemList) {
+        dataMap.shoppingListRef.addItemList(itemList);
       },
     });
 

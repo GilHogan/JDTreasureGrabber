@@ -27,7 +27,8 @@ async function startProcessShoppingList(paramsStr, isStart = true) {
   for (let i = 0; i < shoppingList.length; i++) {
     if (isBiddingStopped || isBrowserDisconnected()) {
       consoleUtil.log("抢购列表处理已停止");
-      break;
+      handleProcessFinished(false);
+      return;
     }
 
     const shoppingItem = shoppingList[i];
@@ -49,22 +50,20 @@ async function startProcessShoppingList(paramsStr, isStart = true) {
       }
       if (bidResult.isError) {
         sendNotice(`商品 ${itemId} 抢购异常`);
-        break;
+        handleProcessFinished(true);
+        return;
       }
       if (bidResult.isBidSuccess && enableStopOnSuccess) {
-        break;
+        handleProcessFinished(true);
+        return;
       }
     } catch (error) {
       consoleUtil.error(`商品 ${itemId} 抢购出现异常:`, error.message);
-      break;
+      handleProcessFinished(false);
+      return;
     }
     if (i === shoppingList.length - 1) {
-      const msg = "抢购列表执行结束";
-      endTimer = setTimeout(() => {
-        sendNotice(msg, `【抢购通知】 ${msg}`);
-        endTimer = null;
-      }, 2000);
-      updateRenderProcessStatus("执行结束");
+      handleProcessFinished(true);
     }
   }
 }
@@ -91,6 +90,20 @@ async function updateProcessShoppingList(paramsStr) {
 function updateRenderProcessStatus(msg) {
   // 数据发送到渲染进程
   mainSendToRender("update.process.status", msg);
+}
+
+/**
+ * 处理结束
+ */
+function handleProcessFinished(isNotice) {
+  const msg = "抢购列表执行结束";
+  if (isNotice) {
+    endTimer = setTimeout(() => {
+      sendNotice(msg, `【抢购通知】 ${msg}`);
+      endTimer = null;
+    }, 2000);
+  }
+  updateRenderProcessStatus("执行结束");
 }
 
 module.exports = { startProcessShoppingList, updateProcessShoppingList };
