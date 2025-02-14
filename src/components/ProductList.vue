@@ -14,6 +14,9 @@
       <el-col :span="1">
         <el-button size="small" type="primary" @click="search">搜索</el-button>
       </el-col>
+      <el-col :span="1">
+        <el-button size="small" type="primary" @click="handleAddAllToShoppingList">添加该页所有商品到抢购列表</el-button>
+      </el-col>
     </el-row>
     <el-table ref="tableRef" :data="productSearchResult.itemList || []" border max-height="500" size="small"
       v-loading="tableLoading">
@@ -86,7 +89,7 @@ const API = require("../../constant/constants").API;
 export default defineComponent({
   name: "ProductList",
   props: [],
-  emits: ["addToShoppingList", "openLink"],
+  emits: ["addToShoppingList", "openLink", "addAllToShoppingList"],
   setup(props, context) {
     onMounted(() => {
       dataMap.fetchProduct();
@@ -178,6 +181,12 @@ export default defineComponent({
       handleAddToShoppingList(productInfo) {
         context.emit("addToShoppingList", productInfo);
         ElMessage({ message: '已添加', type: 'success' });
+      },
+      handleAddAllToShoppingList() {
+        if (dataMap.productSearchResult && dataMap.productSearchResult.itemList && dataMap.productSearchResult.itemList.length > 0) {
+          context.emit("addAllToShoppingList", dataMap.productSearchResult.itemList);
+          ElMessage({ message: '已添加', type: 'success' });
+        }
       },
     });
 
