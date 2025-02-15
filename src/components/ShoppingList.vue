@@ -158,7 +158,6 @@ import { ElMessage } from 'element-plus';
 const dayjs = require("dayjs");
 
 const { Sortable } = require('sortablejs');
-const uuid = require('uuid');
 
 export default defineComponent({
   name: "ShoppingList",
@@ -356,7 +355,7 @@ export default defineComponent({
           cappedPrice: productInfo.cappedPrice,
           primaryPic: productInfo.primaryPic,
           currentPrice: productInfo.currentPrice,
-          key: uuid(),
+          key: window.crypto.randomUUID(),
         })
         nextTick(() => {
           // 更新DOM后滚动到列表底部
