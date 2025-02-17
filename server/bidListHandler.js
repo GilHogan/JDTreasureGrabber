@@ -27,7 +27,7 @@ async function startProcessShoppingList(paramsStr, isStart = true) {
   for (let i = 0; i < shoppingList.length; i++) {
     if (isBiddingStopped || isBrowserDisconnected()) {
       consoleUtil.log("抢购列表处理已停止");
-      handleProcessFinished(false);
+      handleProcessFinished(false, false);
       return;
     }
 
@@ -95,7 +95,7 @@ function updateRenderProcessStatus(msg) {
 /**
  * 处理结束
  */
-function handleProcessFinished(isNotice) {
+function handleProcessFinished(isNotice, isNoticeFinished = true) {
   const msg = "抢购列表执行结束";
   if (isNotice) {
     endTimer = setTimeout(() => {
@@ -103,7 +103,7 @@ function handleProcessFinished(isNotice) {
       endTimer = null;
     }, 2000);
   }
-  updateRenderProcessStatus("执行结束");
+  isNoticeFinished && updateRenderProcessStatus("执行结束");
 }
 
 module.exports = { startProcessShoppingList, updateProcessShoppingList };
