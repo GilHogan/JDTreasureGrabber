@@ -27,6 +27,9 @@
     <el-form-item label="默认出价时间(毫秒)">
       <el-input-number v-model="form.defaultLastBidCountdownTime" :min="1" label="默认最后出价倒数时间(毫秒)"></el-input-number>
     </el-form-item>
+    <el-form-item label="默认抢到即停">
+      <el-switch v-model="form.defaultEnableStopOnSuccess" inline-prompt active-text="启用" inactive-text="关闭"></el-switch>
+    </el-form-item>
     <!-- <el-form-item label="默认后台出价">
       <el-col :span="3">
         <el-row justify="start">
@@ -137,6 +140,7 @@
 
   <el-row justify="center">
     <el-col>
+      <span style="padding: 8px 15px;">重置<el-switch v-model="resetData" inline-prompt active-text="是" inactive-text="否" @change="handleResetData"/></span>
       <el-button type="primary" @click="handleSaveOptions">保存</el-button>
       <el-button @click="handleClose">关闭</el-button>
     </el-col>
@@ -147,6 +151,33 @@
 import { defineComponent, reactive, toRefs, watch } from "vue";
 import { useDark, useToggle } from "@vueuse/core";
 import Constants from "../../constant/constants";
+
+const defaultFormData = {
+  enableTel: false,
+  telBotToken: null,
+  telChatId: null,
+  enableHttpProxy: false,
+  proxyHost: null,
+  proxyPort: null,
+  proxyUserName: null,
+  proxyPassword: null,
+  enableAutoUpdate: true,
+  enableAutoLogin: false,
+  defaultLastBidCountdownTime: 300,
+  defaultMarkup: 2,
+  defaultBiddingMethod: Constants.BiddingMethod.ONE_TIME_BID,
+  enableApiHttpProxy: false,
+  apiProxyHost: null,
+  apiProxyPort: null,
+  apiProxyUserName: null,
+  apiProxyPassword: null,
+  enableCustomEid: false,
+  customEid: null,
+  defaultOfferPriceBack: false,
+  enableDesktopNotification: true,
+  customEidKey: "3AB9D23F7A4B3C9B",
+  defaultEnableStopOnSuccess: true
+}
 
 export default defineComponent({
   name: "CustomOption",
@@ -185,9 +216,16 @@ export default defineComponent({
                 if (undefined === data.enableAutoUpdate || null === data.enableAutoUpdate) {
                   dataMap.form.enableAutoUpdate = true;
                 }
+                if (undefined === data.defaultEnableStopOnSuccess || null === data.defaultEnableStopOnSuccess) {
+                  dataMap.form.defaultEnableStopOnSuccess = true;
+                }
               }
             })
             .catch((e) => console.log("getUserData error = ", e));
+        }
+
+        if (!newOptionVisible) {
+          dataMap.resetData = false;
         }
       },
       { immediate: true }
@@ -195,38 +233,21 @@ export default defineComponent({
 
     const dataMap = reactive({
       Constants,
-      formRef: null,
       isDark: useDark(),
       toggleDark() {
         useToggle(dataMap.isDark);
       },
-      form: {
-        enableTel: false,
-        telBotToken: null,
-        telChatId: null,
-        enableHttpProxy: false,
-        proxyHost: null,
-        proxyPort: null,
-        proxyUserName: null,
-        proxyPassword: null,
-        enableAutoUpdate: true,
-        enableAutoLogin: false,
-        defaultLastBidCountdownTime: 300,
-        defaultMarkup: 2,
-        defaultBiddingMethod: Constants.BiddingMethod.ONE_TIME_BID,
-        enableApiHttpProxy: false,
-        apiProxyHost: null,
-        apiProxyPort: null,
-        apiProxyUserName: null,
-        apiProxyPassword: null,
-        enableCustomEid: false,
-        customEid: null,
-        defaultOfferPriceBack: false,
-        enableDesktopNotification: true,
-        customEidKey: "3AB9D23F7A4B3C9B"
-      },
-      handleSaveOptions() {
+      form: { ...defaultFormData },
+      resetData: false,
+      async handleSaveOptions() {
         if (window.ipc) {
+          if (dataMap.resetData) {
+            // 如果选择了清空数据，则先写入空数据覆盖原来的配置文件
+            await window.ipc.sendInvoke("toMain", {
+              event: "setUserData",
+              params: {},
+            });
+          }
           window.ipc.send("toMain", {
             event: "setUserDataJsonProperty",
             params: {
@@ -239,6 +260,11 @@ export default defineComponent({
       },
       handleClose() {
         context.emit("closeOption");
+      },
+      handleResetData(isOn) {
+        if (isOn) {
+          dataMap.form = { ...defaultFormData };
+        }
       },
     });
 
