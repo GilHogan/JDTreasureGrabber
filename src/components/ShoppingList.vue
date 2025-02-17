@@ -6,7 +6,8 @@
 
     <div class="item-title">{{ `抢购列表（顺序执行状态：${processStatusMsg || "-"}）` }}</div>
     <el-form :inline="true" ref="formRef" :model="shoppingList" size="small">
-      <el-table :data="shoppingList" border height="200" size="small" ref="tableRef" row-key="key">
+      <el-table :data="shoppingList" border height="200" size="small" ref="tableRef" row-key="key"
+                @sort-change="handleSortChange">
         <el-table-column type="index" label="拖动排序" width="65">
           <template #default="scope">
             <div class="drag-to-sort product-link">
@@ -26,7 +27,7 @@
             </el-text>
           </template>
         </el-table-column>
-        <el-table-column label="时间" width="200">
+        <el-table-column label="时间" width="200" sortable="custom" prop="timeRange">
           <template #default="scope">
             <span>{{
                 `${scope.row.startTime ? dayjs(scope.row.startTime).format("YYYY-MM-DD HH:mm:ss") : ""}~${endTimeFormat(scope.row)}`
@@ -407,7 +408,18 @@ export default defineComponent({
       clearItemList() {
         dataMap.shoppingList = [];
       },
-    })
+      handleSortChange({ column, prop, order }) {
+        if (prop === 'timeRange') {
+          if (order === 'ascending') {
+            // 升序排序
+            dataMap.shoppingList.sort((a, b) => dayjs(a.endTime).isBefore(dayjs(b.endTime)) ? -1 : (dayjs(a.endTime).isAfter(dayjs(b.endTime)) ? 1 : 0));
+          } else if (order === 'descending') {
+            // 降序排序
+            dataMap.shoppingList.sort((a, b) => dayjs(b.endTime).isBefore(dayjs(a.endTime)) ? -1 : (dayjs(b.endTime).isAfter(dayjs(a.endTime)) ? 1 : 0));
+          }
+        }
+      }
+    });
 
     return {
       ...toRefs(dataMap),
