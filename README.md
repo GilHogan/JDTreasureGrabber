@@ -16,7 +16,7 @@
 
 ## 功能🎉
 
-1. 支持多种抢购方式进行抢购
+1. 支持多种方式进行抢购、支持列表抢购
 2. 设置最后出价时间（出价后提示抢购已结束时，调大最后出价时间试试）
 3. 商品信息查询
 4. 抢购结果通知到telegram
@@ -27,6 +27,7 @@
 
 <img alt='review' src="assets\images\preview.png" width="60%" style="">
 <img alt='review' src="assets\images\preview2.png" width="60%" style="">
+<img alt='review' src="assets\images\preview3.png" width="60%" style="">
 <img alt='review' src="assets\images\preview_telegram.png" width="60%" style="">
 
 ## 开发相关🐵

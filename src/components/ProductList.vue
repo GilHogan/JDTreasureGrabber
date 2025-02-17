@@ -14,14 +14,17 @@
       <el-col :span="1">
         <el-button size="small" type="primary" @click="search">搜索</el-button>
       </el-col>
+      <el-col :span="1">
+        <el-button size="small" type="primary" @click="handleAddAllToShoppingList">添加该页所有商品到抢购列表</el-button>
+      </el-col>
     </el-row>
     <el-table ref="tableRef" :data="productSearchResult.itemList || []" border max-height="500" size="small"
       v-loading="tableLoading">
       <el-table-column type="index" label="#" width="50"></el-table-column>
       <el-table-column prop="id" label="id" width="100">
         <template #default="scope">
-          <el-tooltip content="设为当前抢购商品" placement="top" :hide-after="0">
-            <span class="product-link" @click="handleSetToCurrentBid(scope.row.id)">{{
+          <el-tooltip content="添加到抢购商品列表" placement="top" :hide-after="0">
+            <span class="product-link" @click="handleAddToShoppingList(scope.row)">{{
         scope.row.id
       }}</span>
           </el-tooltip>
@@ -79,13 +82,14 @@
 
 <script>
 import { defineComponent, reactive, computed, toRefs, onMounted } from "vue";
+import { ElMessage } from 'element-plus';
 const dayjs = require("dayjs");
 const API = require("../../constant/constants").API;
 
 export default defineComponent({
   name: "ProductList",
-  props: ["setToCurrentBidAndFetchDetail", "openLink", "setToCurrentBid"],
-  emits: [],
+  props: [],
+  emits: ["addToShoppingList", "openLink", "addAllToShoppingList"],
   setup(props, context) {
     onMounted(() => {
       dataMap.fetchProduct();
@@ -171,14 +175,18 @@ export default defineComponent({
             });
         }
       },
-      searchItemInfo(productId) {
-        context.emit("setToCurrentBidAndFetchDetail", productId);
-      },
       handleOpenLink(productId) {
         context.emit("openLink", API.item_url + productId);
       },
-      handleSetToCurrentBid(productId) {
-        context.emit("setToCurrentBid", productId);
+      handleAddToShoppingList(productInfo) {
+        context.emit("addToShoppingList", productInfo);
+        ElMessage({ message: '已添加', type: 'success' });
+      },
+      handleAddAllToShoppingList() {
+        if (dataMap.productSearchResult && dataMap.productSearchResult.itemList && dataMap.productSearchResult.itemList.length > 0) {
+          context.emit("addAllToShoppingList", dataMap.productSearchResult.itemList);
+          ElMessage({ message: '已添加', type: 'success' });
+        }
       },
     });
 
@@ -190,11 +198,6 @@ export default defineComponent({
 </script>
 
 <style scoped>
-.product-link {
-  cursor: pointer;
-  color: #2f81f7;
-}
-
 .pagination-class {
   float: right;
 }
