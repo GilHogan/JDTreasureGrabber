@@ -6,6 +6,7 @@
 
 **注意📢**
 
+- [关于软件商用、二次开发及AGPL-3.0协议的相关说明](https://github.com/GilHogan/JDTreasureGrabber/issues/27)
 - 本软件不保证能抢购成功😂
 - 使用前先安装 Chrome 浏览器
 - 所有抢购方式均为：在商品抢购结束时刻之前出价一次
