@@ -314,9 +314,15 @@ export default defineComponent({
         })
       },
       async validateForm() {
-        const valid = await dataMap.formRef.validate((valid) => valid);
+        let valid = await dataMap.formRef.validate((valid) => valid);
         if (!valid) {
           ElMessage({ message: '列表数据校验失败，请检查', type: 'warning' });
+        }
+        // 校验数组中任意两个对象的指定时间字符串字段是否相差在指定阈值内
+        const timeDifError = checkTimeStringDifference(dataMap.shoppingList, "endTime");
+        if (timeDifError) {
+          ElMessage({ message: '商品结束时间相近，请检查', type: 'warning' });
+          valid = false;
         }
         return valid;
       },
@@ -426,6 +432,54 @@ export default defineComponent({
     };
   },
 });
+
+/**
+ * 校验数组中任意两个对象的指定时间字符串字段（格式 "YYYY-MM-DD HH:mm:ss"）是否相差在指定阈值内。
+ */
+ function checkTimeStringDifference(arr, timeStringFieldName, maxDifference = 30, unit = 'second') {
+    // --- 1. 输入校验 ---
+    if (!Array.isArray(arr) || arr.length < 2 || !timeStringFieldName || typeof maxDifference !== 'number' || maxDifference < 0) {
+        // console.warn("输入无效：数组长度至少为2，需要有效的字段名和非负的最大差值。");
+        return false;
+    }
+    // 校验单位是否是 Day.js 支持的常见单位（可以根据需要扩展）
+    const validUnits = ['millisecond', 'second', 'minute', 'hour', 'day'];
+    if (!validUnits.includes(unit)) {
+        console.warn(`未知的单位 "${unit}"，将默认使用 "second"。请使用 Day.js 支持的单位（如 ${validUnits.join(', ')}）`);
+        unit = 'second';
+    }
+
+    const timedItems = arr
+        .map((item, index) => {
+            const timeValue = item?.[timeStringFieldName]; // 安全访问字段
+            const dayjsObj = dayjs(timeValue);
+            return {
+                originalIndex: index, // 保留原始索引
+                dayjsObj: dayjsObj
+            };
+        })
+        .filter(item => item.dayjsObj !== null); // 过滤掉无效时间项
+    // 如果有效时间项少于2个，无法比较
+    if (timedItems.length < 2) {
+        return false;
+    }
+
+    // Day.js 对象可以直接比较，或者比较它们的毫秒值 .valueOf()
+    timedItems.sort((a, b) => a.dayjsObj.valueOf() - b.dayjsObj.valueOf());
+    // --- 5. 比较排序后相邻元素的时间差 ---
+    for (let i = 0; i < timedItems.length - 1; i++) {
+        const time1 = timedItems[i].dayjsObj;
+        const time2 = timedItems[i + 1].dayjsObj;
+
+        // 使用 Day.js 的 diff 方法计算差值
+        const diff = time2.diff(time1, unit); // 计算指定单位下的差值（向下取整）
+        if (diff <= maxDifference) {
+            return true;
+        }
+    }
+    // --- 6. 如果循环结束仍未找到符合条件的，返回 false ---
+    return false;
+}
 </script>
 
 <style scoped>

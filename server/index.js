@@ -328,7 +328,7 @@ async function handleGoToTargetPage() {
 	}
 
 	// 避免服务端限流循环获取竞拍实时信息
-	const isGetBatchInfoSuccess = await loopRequestAvoidCurrentLimiting(getBatchInfo);
+	const isGetBatchInfoSuccess = await loopRequestAvoidCurrentLimiting(getBatchInfo, 0, 1000 * 10);
 	if (!isGetBatchInfoSuccess || !EndTime) {
 		handleSendNotice(`获取抢购信息失败，请检查`, true);
 		updateRenderShoppingItemStatus(Constants.ShoppingStatus.FAILED, "获取抢购信息失败");
@@ -621,7 +621,7 @@ async function handleLastMinuteBuy(time) {
 		try {
 			// 等待最后一次更新竞拍实时信息
 			consoleUtil.log("start last update batchInfo.");
-			await loopRequestAvoidCurrentLimiting(getBatchInfo, 3, 200);
+			await loopRequestAvoidCurrentLimiting(getBatchInfo, 3, 50);
 
 			let bidPrice;
 			let isAboveMaxPrice = false;
