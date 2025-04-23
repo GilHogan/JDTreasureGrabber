@@ -282,22 +282,21 @@ function fetchProduct(params = {}) {
  * 避免服务端限流的循环请求
  * @param {function} requestFn 请求方法
  * @param {number} maxFetchTimes 最大请求次数
- * @param {number} baseWaitingMinute 基础等待时间（分钟）
+ * @param {number} baseWaitingMillisecond 基础等待时间（毫秒）
  */
-async function loopRequestAvoidCurrentLimiting(requestFn, maxFetchTimes = 0, baseWaitingMinute = 5) {
+async function loopRequestAvoidCurrentLimiting(requestFn, maxFetchTimes = 0, baseWaitingMillisecond = 30000) {
 	let result = null;
 	let fetchTimes = 0;
 	do {
 		fetchTimes++;
 		try {
-			await sleep(1000);
 			// 执行查询请求
 			result = await requestFn();
 			result = result || true;
 		} catch (e) {
-			// 尝试避免服务端限流，请求结果有时为空，这里等待一会儿再做查询
-			await sleep(1000 * 60 * baseWaitingMinute * fetchTimes);
 			consoleUtil.log("loopRequestAvoidCurrentLimiting error: ", e.message);
+			// 尝试避免服务端限流，请求结果有时为空，这里等待一会儿再做查询
+			await sleep(baseWaitingMillisecond * fetchTimes);
 		}
 	} while ((maxFetchTimes ? fetchTimes <= maxFetchTimes : true) && !result);
 	return result;

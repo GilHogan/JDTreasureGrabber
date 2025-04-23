@@ -1,6 +1,6 @@
 {
 	"name": "JDTreasureGrabber",
-	"version": "0.5.0",
+	"version": "0.5.1",
 	"author": "hogan <hogan01.id@gmail.com> (https://github.com/GilHogan/JDTreasureGrabber)",
 	"description": "京东夺宝岛助手",
 	"private": true,
@@ -116,6 +116,10 @@
 		"extraFiles": [
 			{
 				"from": "./LICENSE",
+				"to": "./"
+			},
+			{
+				"from": "./README.md",
 				"to": "./"
 			}
 		]
