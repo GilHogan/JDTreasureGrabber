@@ -328,7 +328,7 @@ async function handleGoToTargetPage() {
 	}
 
 	// 避免服务端限流循环获取竞拍实时信息
-	const isGetBatchInfoSuccess = await loopRequestAvoidCurrentLimiting(getBatchInfo);
+	const isGetBatchInfoSuccess = await loopRequestAvoidCurrentLimiting(getBatchInfo, 0, 1000 * 10);
 	if (!isGetBatchInfoSuccess || !EndTime) {
 		handleSendNotice(`获取抢购信息失败，请检查`, true);
 		updateRenderShoppingItemStatus(Constants.ShoppingStatus.FAILED, "获取抢购信息失败");
@@ -439,7 +439,7 @@ function checkBidIsNearingEnd() {
 		// 结束循环竞拍实时信息查询
 		CycleTimer && clearTimeout(CycleTimer);
 		try {
-			await getBatchInfo();
+			await loopRequestAvoidCurrentLimiting(getBatchInfo, 3, 500);
 		} catch (error) {
 			consoleUtil.log("checkBidIsNearingEnd error: ", error.message);
 		}
@@ -621,7 +621,7 @@ async function handleLastMinuteBuy(time) {
 		try {
 			// 等待最后一次更新竞拍实时信息
 			consoleUtil.log("start last update batchInfo.");
-			await getBatchInfo();
+			await loopRequestAvoidCurrentLimiting(getBatchInfo, 3, 50);
 
 			let bidPrice;
 			let isAboveMaxPrice = false;
@@ -664,8 +664,9 @@ async function handleLastMinuteBuy(time) {
 				await buyByPage(bidPrice);
 			}
 			await sleep(currentRemainTime + 5000);
+
 			// 最后再获取商品信息，查看竞拍结果
-			getBatchInfo().then(() => {
+			loopRequestAvoidCurrentLimiting(getBatchInfo, 3, 2000).then(() => {
 				// 出价后，最后一次查询商品信息，发送通知消息
 				const userNickName = (Cookie.find(cookie => "unick" === cookie.name) || {}).value;
 				let isBidSuccess = false;
