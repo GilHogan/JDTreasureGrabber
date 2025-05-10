@@ -6,6 +6,9 @@
 
 **注意📢**
 
+- 请注意，任何自动化、非人工的购买行为，特别是涉及高频或批量的操作，都极有可能违反京东平台（或任何其他电商平台）的用户协议、服务条款及相关规则。京东平台有权根据其规则对违规账号采取措施，包括但不限于：限制购买、取消订单、冻结或永久封禁账号，甚至追究法律责任。更多请参考[免责声明](https://github.com/GilHogan/JDTreasureGrabber?tab=readme-ov-file#%E5%85%8D%E8%B4%A3%E5%A3%B0%E6%98%8E)
+- 本软件仅供学习、交流和技术研究使用，更多请参考[免责声明](https://github.com/GilHogan/JDTreasureGrabber?tab=readme-ov-file#%E5%85%8D%E8%B4%A3%E5%A3%B0%E6%98%8E)
+- 本软件严禁用户将其用于大规模、超出个人合理需求的批量抢购行为，尤其反对利用软件功能进行恶意囤积、扰乱市场秩序或进行商业转卖盈利的行为。如有上述行为，请您立即停止使用本软件，并将其从您的设备上彻底卸载。
 - [关于软件商用、二次开发及AGPL-3.0协议的相关说明](https://github.com/GilHogan/JDTreasureGrabber/issues/27)
 - 本软件不保证能抢购成功😂
 - 使用前先安装 Chrome 浏览器
@@ -13,8 +16,6 @@
 - 除了一口价抢购方式外，加价抢购方式均以他人的出价为基础进行加价
 - 关闭抢购商品所在的浏览器即为结束抢购；抢购还未开始时，最小化浏览器或离开商品页面不会进行后续的出价
 - telegram配置中，bot token和chat id参数的获取[参考](https://medium.com/@ManHay_Hong/how-to-create-a-telegram-bot-and-send-messages-with-python-4cf314d9fa3e)，或自行搜索解决
-- 本软件仅供学习、交流和技术研究使用，更多请参考[免责声明](https://github.com/GilHogan/JDTreasureGrabber?tab=readme-ov-file#%E5%85%8D%E8%B4%A3%E5%A3%B0%E6%98%8E)
-- 本软件严禁用户将其用于大规模、超出个人合理需求的批量抢购行为，尤其反对利用软件功能进行恶意囤积、扰乱市场秩序或进行商业转卖盈利的行为。如有上述行为，请您立即停止使用本软件，并将其从您的设备上彻底卸载。
 
 ## 功能🎉
 
