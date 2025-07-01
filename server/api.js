@@ -103,57 +103,87 @@ function handlePostOfferPrice(options, postData, price, resolve, reject) {
 
 /**
  * 获得竞拍实时信息请求
+ * @param {object} requestOptions - 包含请求URL、方法、头和体的对象
+ * @param {string} requestOptions.url - 完整的请求URL
+ * @param {string} requestOptions.method - 请求方法 (GET/POST)
+ * @param {object} requestOptions.headers - 请求头对象
+ * @param {string} [requestOptions.postData] - 请求体 (可选)
  * */
-function fetchBatchInfo(bidId) {
+function fetchBatchInfo(requestOptions) {
 	return new Promise((resolve, reject) => {
+		if (!requestOptions || !requestOptions.url) {
+			consoleUtil.error("fetchBatchInfo: requestOptions 或 requestOptions.url 无效");
+			reject(new Error("请求参数无效"));
+			return;
+		}
 
-		const path = `${API.api_jd_path}?functionId=paipai.auction.current_bid_info&t=${new Date().getTime()}&appid=paipai_sale_pc&client=pc&loginType=3&body=${encodeURI("{\"auctionId\":" + bidId + "}")}`;
+		let url;
+		try {
+			url = new URL(requestOptions.url);
+		} catch (e) {
+			consoleUtil.error(`fetchBatchInfo: URL 解析失败 - ${e.message}. URL: ${requestOptions.url}`);
+			reject(new Error(`URL 解析失败: ${e.message}`));
+			return;
+		}
+
+		const searchParams = url.searchParams;
+		searchParams.set('t', new Date().getTime()); // 动态更新 t 参数
 
 		const options = {
-			hostname: API.api_jd_hostname,
-			port: 443,
-			path: path,
-			method: "GET",
-			headers: {
-				"referer": API.web_api_header_referer
-			}
+			hostname: url.hostname,
+			port: url.port || 443,
+			path: url.pathname + '?' + searchParams.toString(),
+			method: requestOptions.method || "GET",
+			headers: requestOptions.headers || {}
 		};
 
-		const req = https.request(options, (res) => {
-			let rawData = "";
+		let req;
+		try {
+			req = https.request(options, (res) => {
+				let rawData = "";
 
-			res.setEncoding('utf8');
+				res.setEncoding('utf8');
 
-			res.on('data', (chunk) => {
-				rawData += chunk;
-			});
+				res.on('data', (chunk) => {
+					rawData += chunk;
+				});
 
-			res.on('end', () => {
-				try {
-					const parsedData = JSON.parse(rawData);
-					if (parsedData.result) {
-						resolve(parsedData.result);
-					} else {
-						consoleUtil.error("获取竞拍实时信息失败");
-						reject(new Error("获取竞拍实时信息失败"));
+				res.on('end', () => {
+					try {
+						const parsedData = JSON.parse(rawData);
+						if (parsedData.result) {
+							resolve(parsedData.result);
+						} else {
+							consoleUtil.error("获取竞拍实时信息失败");
+							reject(new Error("获取竞拍实时信息失败"));
+							return;
+						}
+					} catch (e) {
+						consoleUtil.error("getBatchInfo error: ", e.message);
+						reject(e);
 						return;
 					}
-				} catch (e) {
-					consoleUtil.error("getBatchInfo error: ", e.message);
-					reject(e);
-					return;
-				}
+				});
 			});
-		});
+		} catch (e) {
+			consoleUtil.error(`fetchBatchInfo: https.request 调用失败 - ${e.message}. Options: ${JSON.stringify(options)}`);
+			reject(new Error(`请求创建失败: ${e.message}`));
+			return;
+		}
+
 
 		req.on('error', (e) => {
 			consoleUtil.error(`请求遇到问题: ${e.message}`);
 			reject(e);
 		});
 
+		if (requestOptions.postData) {
+			req.write(requestOptions.postData);
+		}
 		req.end();
 	});
 }
+
 
 /**
  * 校验商品详情接口的curl,返回商品id

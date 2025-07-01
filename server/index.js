@@ -12,6 +12,9 @@ const userAgent = require('user-agents');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth')
 const { mainSendToRender } = require('./utils/mainProcessMsgHandle');
 
+// 全局变量，用于存储从浏览器捕获的 paipai.auction.current_bid_info 请求的完整信息
+let globalRequestOptionsForBatchInfo = null;
+
 // 商品的ID
 let Item_ID;
 
@@ -270,6 +273,7 @@ function resetData() {
 	CurrentBidResolve= null;
 	ShoppingItem = null;
 	BrowserDisconnected = false;
+	globalRequestOptionsForBatchInfo = null;
 }
 
 /**
@@ -287,6 +291,22 @@ async function handleGoToTargetPage() {
 		await page.goto(Item_URL);
 	}
 	updateRenderShoppingItemStatus(Constants.ShoppingStatus.IN_PROGRESS);
+
+    // 启用请求拦截
+    await page.setRequestInterception(true);
+
+    // 监听所有请求，确保它们继续，并捕获目标请求
+    page.on('request', interceptedRequest => {
+        if (interceptedRequest.url().includes('api.m.jd.com/api?functionId=paipai.auction.current_bid_info')) {
+            globalRequestOptionsForBatchInfo = {
+                url: interceptedRequest.url(),
+                headers: interceptedRequest.headers(),
+                method: interceptedRequest.method(),
+                postData: interceptedRequest.postData()
+            };
+        }
+        interceptedRequest.continue();
+    });
 
 	// 需要使用两个页面的cookie
 	const page_cookie = await page.cookies();
@@ -456,7 +476,13 @@ function getBatchInfo() {
 	return new Promise(async (resolve, reject) => {
 		const startTime = new Date().getTime();
 		try {
-			const result = await fetchBatchInfo(Item_ID);
+			// 确保 globalRequestOptionsForBatchInfo 已经被捕获到
+			if (!globalRequestOptionsForBatchInfo) {
+				consoleUtil.error("globalRequestOptionsForBatchInfo 未捕获到，无法发送请求。");
+				reject(new Error("请求信息未准备好"));
+				return;
+			}
+			const result = await fetchBatchInfo(globalRequestOptionsForBatchInfo);
 			const endTime = new Date().getTime();
 			LastGetBatchInfoOffsetTime = endTime - startTime;
 			if (result && result.data && result.data[Item_ID]) {
