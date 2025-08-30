@@ -239,74 +239,7 @@ function fetchBidDetail(auctionDetailCurl) {
 	});
 }
 
-/**
- * 搜索产品请求
- * status: ""：全部，1：即将开始，2：正在进行
- * */
-function fetchProduct(params = {}) {
-	const { name, pageNo = 1, status = "" } = params;
-	return new Promise((resolve, reject) => {
 
-		let path, params;
-		if (name) {
-			path = `${API.api_jd_path}?functionId=pp.dbd.biz.search.query&t=${new Date().getTime()}&appid=paipai_h5`;
-			params = { pageNo: pageNo, pageSize: 20, key: name, status: status, sort: "endTime_asc", specialType: 1, mpSource: 1, sourceTag: 2 };
-		} else {
-			path = `${API.api_jd_path}?functionId=dbd.auction.list.v2&t=${new Date().getTime()}&appid=paipai_h5`;
-			params = { pageNo: pageNo, pageSize: 20, key: name, status: status, auctionFilterTime: 180, isPersonalRecommend: 0, p: 2, skuGroup: 1, mpSource: 1, sourceTag: 2 };
-		}
-
-		const options = {
-			hostname: API.api_jd_hostname,
-			port: 443,
-			path: path,
-			method: "POST",
-			headers: {
-				"Content-Type": 'application/x-www-form-urlencoded',
-				"User-Agent": "jdapp;android;12.0.2;;;M/5.0;appBuild/98787;ef/1;ep/%7B%22hdid%22%3A%22JM9F1ywUPwflvMIpYPok0tt5k9kW4ArJEU3lfLhxBqw%3D%22%2C%22ts%22%3A1685444654944%2C%22ridx%22%3A-1%2C%22cipher%22%3A%7B%22sv%22%3A%22CJC%3D%22%2C%22ad%22%3A%22CtG3YtCyDtc3EJCmC2OyYm%3D%3D%22%2C%22od%22%3A%22CzY5ZJU0CQU3C2OyEJvwYq%3D%3D%22%2C%22ov%22%3A%22CzC%3D%22%2C%22ud%22%3A%22CtG3YtCyDtc3EJCmC2OyYm%3D%3D%22%7D%2C%22ciphertype%22%3A5%2C%22version%22%3A%221.2.0%22%2C%22appname%22%3A%22com.jingdong.app.mall%22%7D;jdSupportDarkMode/0;Mozilla/5.0 (Linux; Android 13; MI 8 Build/TKQ1.220905.001; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/89.0.4389.72 MQQBrowser/6.2 TBS/046247 Mobile Safari/537.36",
-				"Referer": API.app_api_header_referer,
-				"Sec-Fetch-Mode": "cors"
-			}
-		};
-
-		const bodyParams = {};
-		bodyParams.body = JSON.stringify(params);
-		const postData = querystring.stringify(bodyParams);
-
-		const req = https.request(options, (res) => {
-			let rawData = "";
-
-			res.setEncoding('utf8');
-
-			res.on('data', (chunk) => {
-				rawData += chunk;
-			});
-
-			res.on('end', () => {
-				let data = null;
-				try {
-					if (rawData) {
-						const parsedData = JSON.parse(rawData);
-						if (parsedData.result && parsedData.result.data) {
-							data = parsedData.result.data;
-						}
-					}
-				} catch (e) {
-					consoleUtil.error("fetchProduct error:", e.message);
-				}
-				resolve(data);
-			});
-		});
-
-		req.on('error', (e) => {
-			consoleUtil.error(`fetchProduct 请求遇到问题: ${e.message}`);
-			reject(e);
-		});
-
-		req.write(postData);
-		req.end();
-	});
-}
 
 /**
  * 避免服务端限流的循环请求
@@ -344,7 +277,6 @@ module.exports = {
 	postOfferPrice,
 	fetchBatchInfo,
 	fetchBidDetail,
-	fetchProduct,
 	loopRequestAvoidCurrentLimiting,
 	sleep,
 	checkAuctionDetailCurl
