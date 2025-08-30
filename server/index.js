@@ -1,8 +1,12 @@
 const puppeteer = require('puppeteer-extra')
 const findChrome = require('../node_modules/carlo/lib/find_chrome.js');
-const { postOfferPrice, fetchBatchInfo, fetchProduct,
-	loopRequestAvoidCurrentLimiting, sleep } = require("./api");
-const dayjs = require('dayjs');
+const {
+	postOfferPrice,
+	fetchBatchInfo,
+	loopRequestAvoidCurrentLimiting,
+	sleep,
+} = require("./api");
+const dayjs = require("dayjs");
 const Constants = require("../constant/constants");
 const consoleUtil = require('./utils/consoleLogUtil');
 const { sendNotice } = require('./utils/noticeUtil');
@@ -752,6 +756,167 @@ async function getBidDetailFromBrowser(id) {
 			resolve();
 		});
 	});
+}
+
+
+
+async function new_browser() {
+	let findChromePath = await findChrome({});
+	let executablePath = findChromePath.executablePath;
+
+	puppeteer.use(StealthPlugin())
+
+	return await puppeteer.launch({
+		executablePath,
+		headless: true,
+		defaultViewport: null,
+		args: [
+			'--disable-web-security',
+		],
+		ignoreDefaultArgs: ['--enable-automation']
+	});
+}
+
+
+let auctionInfos = [];
+let catching = false;
+let cachePromise = null;
+async function cacheProduct() {
+	if (catching) {
+		// 如果已经在缓存中，直接返回已有的Promise
+		return cachePromise;
+	}
+
+	catching = true;
+
+	// 初始化浏览器
+	let browser = await new_browser();
+
+	// 获取浏览器中的页面
+	let page = await browser.newPage();
+
+	// 访问目标网站
+	await page.goto("https://paipai.jd.com/auction-list/");
+	//console.log("已访问商品列表页面");
+
+	// 获取未来1小时的时间戳
+	const future1Hour = new Date().getTime() + 1 * 60 * 60 * 1000;
+	let page_index = 0;
+	while (true) {
+		// 不设置max_pages限制，持续翻页直到遇到符合条件的商品
+		let response = null;
+
+		// 等待 paipai.auction.list 请求响应
+		try {
+			const responsePromise = page.waitForResponse(
+				(response) =>
+					response.url().includes("paipai.auction.list") &&
+					response.url().includes("auctionFilterTime"),
+				{ timeout: 10000 }
+			);
+			// 等待响应
+			response = await responsePromise;
+		} catch (error) {
+			console.log("等待响应超时", error.message);
+		}
+
+		if (response && response.ok()) {
+			try {
+				const responseJson = await response.json();
+				let temp_auctions = responseJson.result?.data?.auctionInfos || [];
+				auctionInfos.push(...temp_auctions);
+				page_index++;
+				console.log("已缓存第", page_index, "页，共计", auctionInfos.length, "个拍卖商品");
+				const last_auction = temp_auctions[temp_auctions.length - 1];
+				const end_time = last_auction.endTime;
+				if (end_time > future1Hour) {
+					console.log("已缓存1小时内的拍卖商品，共计", auctionInfos.length, "个");
+					break; //只缓存1个小时的拍卖
+				}
+			} catch (jsonError) {
+				console.log("解析响应JSON失败:", jsonError.message);
+			}
+		} else {
+			console.log("响应失败:", response?.status());
+		}
+
+		try {
+			await page.click("#app > div > div.list-selector > div > div.el-pagination.is-background > button.btn-next");
+		} catch (clickError) {
+			console.log("点击下一页按钮失败", clickError.message);
+			break;
+		}
+	}
+	await browser.close();
+	console.log("缓存完成，浏览器已关闭");
+	// 标记缓存完成
+	catching = false;
+}
+
+
+
+/**
+ * 搜索产品请求
+ * status: ""：全部，1：即将开始，2：正在进行
+ * */
+async function fetchProduct(params = {}) {
+	const { name, pageNo = 1, status = "" } = params;
+
+	// 如果还没有开始缓存，则启动缓存任务
+	if (!cachePromise) {
+		cachePromise = cacheProduct();
+		// 等待缓存任务完成（但不阻塞fetchProduct的返回）
+		cachePromise.catch((error) => {
+			consoleUtil.error("缓存任务出错:", error.message);
+		});
+	}
+
+	// 等待auctionInfos有值，最多等待3秒
+	const timeoutPromise = new Promise((_, reject) => {
+		setTimeout(() => {
+			reject(new Error("缓存超时"));
+		}, 3000);
+	});
+
+	try {
+		// 等待auctionInfos有值或超时
+		await Promise.race([
+			new Promise((resolve, reject) => {
+				const checkInterval = setInterval(() => {
+					if (auctionInfos && auctionInfos.length > 0) {
+						clearInterval(checkInterval);
+						resolve();
+					}
+				}, 100);
+
+				// 3秒超时检查
+				setTimeout(() => {
+					clearInterval(checkInterval);
+					reject(new Error("缓存超时"));
+				}, 3000);
+			}),
+			timeoutPromise
+		]);
+
+		let search_auctions = []
+		for (let auction of auctionInfos) {
+			if (auction.productName.includes(name) && (status === "" || auction.status === status)) {
+				search_auctions.push(auction);
+			}
+		}
+
+		const productSearchResult = {
+			itemList: search_auctions,
+		};
+		return productSearchResult;
+	} catch (error) {
+		// 超时或出错时返回空的productSearchResult
+		consoleUtil.log("fetchProduct超时或出错:", error.message);
+		const productSearchResult = {
+			itemList: [],
+		};
+		return productSearchResult;
+	}
 }
 
 /**
