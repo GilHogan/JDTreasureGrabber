@@ -74,9 +74,11 @@
       <el-table-column prop="currentPrice" label="当前价"></el-table-column>
       <!-- <el-table-column prop="spectatorCount" label="围观数"> </el-table-column> -->
     </el-table>
+    <!-- 没什么用了
     <el-pagination layout="prev, pager, next, jumper" :page-count="productSearchResult.pageCount" :page-size="20"
       :current-page="productSearchResult.pageNo" @current-change="fetchProduct" :total="productSearchResult.count"
       class="pagination-class" />
+  -->
   </div>
 </template>
 
@@ -146,23 +148,7 @@ export default defineComponent({
             })
             .then((data) => {
               if (data) {
-                // 有无商品调用接口不同，返回数据格式也不同
-                if (searchName) {
-                  if (data.itemList && data.itemList.length > 0) {
-                    // 根据开始时间重新排序
-                    data.itemList.sort((a, b) => {
-                      return a.startTime - b.startTime;
-                    });
-                  }
-                  dataMap.productSearchResult = data;
-                } else {
-                  dataMap.productSearchResult = {
-                    pageCount: Math.ceil(data.totalNumber / 20),
-                    count: data.totalNumber,
-                    pageNo: pageNo,
-                    itemList: data.auctionInfos,
-                  };
-                }
+                dataMap.productSearchResult = data;
               } else {
                 dataMap.productSearchResult = { pageCount: 0 };
               }
