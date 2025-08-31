@@ -1,22 +1,24 @@
 <template>
   <div style="padding: 10px">
     <div class="app-title">商品搜索</div>
-    <el-row style="margin: 5px 0">
-      <el-col :span="4">
-        <el-input size="small" placeholder="搜索你想要的商品" v-model="productName" @keyup.enter="search" />
-      </el-col>
-      <el-col :span="3" style="margin: 0 5px">
-        <el-select size="small" v-model="status" placeholder="请选择商品状态">
-          <el-option v-for="item in options" :key="item.value" :label="item.label" :value="item.value">
-          </el-option>
-        </el-select>
-      </el-col>
-      <el-col :span="1">
-        <el-button size="small" type="primary" @click="search">搜索</el-button>
-      </el-col>
-      <el-col :span="1">
-        <el-button size="small" type="primary" @click="handleAddAllToShoppingList">添加该页所有商品到抢购列表</el-button>
-      </el-col>
+    <el-row class="search-controls">
+      <el-input size="small" placeholder="搜索你想要的商品" v-model="productName" @keyup.enter="search" style="width: 200px;" />
+      <el-select size="small" v-model="status" placeholder="请选择商品状态" style="width: 120px; margin-left: 10px;">
+        <el-option v-for="item in options" :key="item.value" :label="item.label" :value="item.value">
+        </el-option>
+      </el-select>
+      <el-button size="small" type="primary" @click="search" style="margin-left: 10px;">搜索</el-button>
+      <el-button size="small" type="primary" @click="handleAddAllToShoppingList">添加该页所有商品到抢购列表</el-button>
+      <el-button size="small" type="primary" @click="handleManualCache" :loading="cacheLoading">拉取商品列表</el-button>
+      
+      <span class="control-label">缓存时间</span>
+      <el-select size="small" v-model="futureHour" placeholder="请选择缓存时间" style="width: 100px;">
+        <el-option v-for="item in futureHourOptions" :key="item.value" :label="item.label" :value="item.value">
+        </el-option>
+      </el-select>
+      
+      <span class="control-label">拉取间隔(秒)</span>
+      <el-input-number size="small" v-model="sleepTime" :min="0" :step="1" placeholder="拉取间隔(秒)" />
     </el-row>
     <el-table ref="tableRef" :data="productSearchResult.itemList || []" border max-height="500" size="small"
       v-loading="tableLoading">
@@ -94,18 +96,29 @@ export default defineComponent({
   emits: ["addToShoppingList", "openLink", "addAllToShoppingList"],
   setup(props, context) {
     onMounted(() => {
-      dataMap.fetchProduct();
+      // dataMap.fetchProduct();
     });
 
     const dataMap = reactive({
       tableRef: null,
       tableLoading: false,
+      cacheLoading: false,
       dayjs: dayjs,
       productName: "",
-      status: 2,
+      status: 0,
+      futureHour: 1,
+      sleepTime: 3,
+      futureHourOptions: [
+        { value: 1, label: "1小时内" },
+        { value: 2, label: "2小时内" },
+        { value: 3, label: "3小时内" },
+        { value: 4, label: "4小时内" },
+        { value: 5, label: "5小时内" },
+        { value: 6, label: "6小时内" },
+      ],
       options: [
         {
-          value: "",
+          value: 0,
           label: "全部",
         },
         {
@@ -144,6 +157,8 @@ export default defineComponent({
                 name: searchName,
                 pageNo: pageNo,
                 status: dataMap.status,
+                futureHour: dataMap.futureHour,
+                sleepTime: dataMap.sleepTime
               },
             })
             .then((data) => {
@@ -174,6 +189,26 @@ export default defineComponent({
           ElMessage({ message: '已添加', type: 'success' });
         }
       },
+      handleManualCache() {
+        if (window.ipc) {
+          dataMap.cacheLoading = true;
+          window.ipc.sendInvoke("toMain", {
+            event: "manualCacheProduct",
+            params: {
+              futureHour: dataMap.futureHour,
+              sleepTime: dataMap.sleepTime
+            }
+          }).then(() => {
+            ElMessage({ message: '商品列表更新成功', type: 'success' });
+            dataMap.search();
+          }).catch(e => {
+            console.log("manualCacheProduct error = ", e);
+            ElMessage({ message: '商品列表更新失败', type: 'error' });
+          }).finally(() => {
+            dataMap.cacheLoading = false;
+          });
+        }
+      }
     });
 
     return {
@@ -186,5 +221,16 @@ export default defineComponent({
 <style scoped>
 .pagination-class {
   float: right;
+}
+.search-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px; /* Creates space between items */
+  margin: 5px 0;
+}
+.control-label {
+  margin-left: 10px;
+  font-size: 14px;
+  color: #606266;
 }
 </style>

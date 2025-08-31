@@ -1,5 +1,5 @@
 
-const { goToBid, updateBid, getBidDetail, searchProduct, goToProductPage } = require("./index");
+const { goToBid, updateBid, getBidDetail, searchProduct, goToProductPage, manualCacheProduct } = require("./index");
 const { getUserDataProperty, setUserDataJsonProperty, setUserData } = require("./utils/storeUtil");
 const { openLinkInBrowser } = require("./utils/commonUtil");
 const { startProcessShoppingList, updateProcessShoppingList } = require("./bidListHandler");
@@ -33,7 +33,9 @@ async function ipcHandle(e, args) {
         startProcessShoppingList(params);
     } else if (event == "updateProcessShoppingList") {
         updateProcessShoppingList(params);
-    }
+    } else if (event == "manualCacheProduct") {
+		await manualCacheProduct(params);
+	}
 
 
     return data;

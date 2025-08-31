@@ -229,20 +229,7 @@ async function initBrowser() {
 		return;
 	}
 
-	let findChromePath = await findChrome({});
-	let executablePath = findChromePath.executablePath;
-
-	puppeteer.use(StealthPlugin())
-
-	Browser = await puppeteer.launch({
-		executablePath,
-		headless: false,
-		defaultViewport: null,
-		args: [
-			'--disable-web-security',
-		],
-		ignoreDefaultArgs: ['--enable-automation']
-	});
+	Browser = await newBrowser(false);
 
 	Browser.on("disconnected", () => {
 		consoleUtil.log("Browser on disconnected");
@@ -758,9 +745,7 @@ async function getBidDetailFromBrowser(id) {
 	});
 }
 
-
-
-async function new_browser() {
+async function newBrowser(headless = false) {
 	let findChromePath = await findChrome({});
 	let executablePath = findChromePath.executablePath;
 
@@ -768,7 +753,7 @@ async function new_browser() {
 
 	return await puppeteer.launch({
 		executablePath,
-		headless: true,
+		headless: headless,
 		defaultViewport: null,
 		args: [
 			'--disable-web-security',
@@ -777,145 +762,130 @@ async function new_browser() {
 	});
 }
 
-
 let auctionInfos = [];
 let catching = false;
 let cachePromise = null;
-async function cacheProduct() {
+async function cacheProduct(params = {}) {
+
+	const { futureHour = 1, sleepTime = 3 } = params;
 	if (catching) {
-		// 如果已经在缓存中，直接返回已有的Promise
 		return cachePromise;
 	}
-
 	catching = true;
 
-	// 初始化浏览器
-	let browser = await new_browser();
+	let browser;
+	try {
+		const tempAuctionInfos = [];
+		browser = await newBrowser(true);
+		const page = await browser.newPage();
+		await page.goto("https://paipai.jd.com/auction-list/");
 
-	// 获取浏览器中的页面
-	let page = await browser.newPage();
-
-	// 访问目标网站
-	await page.goto("https://paipai.jd.com/auction-list/");
-	//console.log("已访问商品列表页面");
-
-	// 获取未来1小时的时间戳
-	const future1Hour = new Date().getTime() + 1 * 60 * 60 * 1000;
-	let page_index = 0;
-	while (true) {
-		// 不设置max_pages限制，持续翻页直到遇到符合条件的商品
-		let response = null;
-
-		// 等待 paipai.auction.list 请求响应
-		try {
-			const responsePromise = page.waitForResponse(
-				(response) =>
-					response.url().includes("paipai.auction.list") &&
-					response.url().includes("auctionFilterTime"),
-				{ timeout: 10000 }
-			);
-			// 等待响应
-			response = await responsePromise;
-		} catch (error) {
-			console.log("等待响应超时", error.message);
-		}
-
-		if (response && response.ok()) {
+		let futureTimestamp;
+		let page_index = 0;
+		while (true) {
+			let response = null;
 			try {
-				const responseJson = await response.json();
-				let temp_auctions = responseJson.result?.data?.auctionInfos || [];
-				auctionInfos.push(...temp_auctions);
-				page_index++;
-				console.log("已缓存第", page_index, "页，共计", auctionInfos.length, "个拍卖商品");
-				const last_auction = temp_auctions[temp_auctions.length - 1];
-				const end_time = last_auction.endTime;
-				if (end_time > future1Hour) {
-					console.log("已缓存1小时内的拍卖商品，共计", auctionInfos.length, "个");
-					break; //只缓存1个小时的拍卖
-				}
-			} catch (jsonError) {
-				console.log("解析响应JSON失败:", jsonError.message);
+				const responsePromise = page.waitForResponse(
+					(res) =>
+						res.url().includes("paipai.auction.list") &&
+						res.url().includes("auctionFilterTime"),
+					{ timeout: 10000 }
+				);
+				response = await responsePromise;
+			} catch (error) {
+				consoleUtil.log("等待响应超时", error.message);
 			}
-		} else {
-			console.log("响应失败:", response?.status());
-		}
 
-		try {
-			await page.click("#app > div > div.list-selector > div > div.el-pagination.is-background > button.btn-next");
-		} catch (clickError) {
-			console.log("点击下一页按钮失败", clickError.message);
-			break;
+			if (response && response.ok()) {
+				try {
+					const responseJson = await response.json();
+					if (page_index === 0) {
+						const systemTime = responseJson.result?.data?.systemTime || new Date().getTime();
+						futureTimestamp = systemTime + futureHour * 60 * 60 * 1000;
+					}
+					const temp_auctions = responseJson.result?.data?.auctionInfos || [];
+					if (temp_auctions.length === 0) {
+						consoleUtil.log(`未获取到商品数据，停止缓存，共计`, tempAuctionInfos.length, "个");
+						break;
+					}
+					tempAuctionInfos.push(...temp_auctions);
+					page_index++;
+					consoleUtil.log("已缓存第", page_index, "页，共计", tempAuctionInfos.length, "个拍卖商品");
+					const last_auction = temp_auctions[temp_auctions.length - 1];
+					if (last_auction.endTime > futureTimestamp) {
+						consoleUtil.log(`已缓存${futureHour}小时内的拍卖商品，共计`, tempAuctionInfos.length, "个");
+						break;
+					}
+				} catch (jsonError) {
+					consoleUtil.log("解析响应JSON失败:", jsonError.message);
+				}
+			} else {
+				consoleUtil.log("响应失败:", response?.status());
+			}
+
+			try {
+				await sleep(sleepTime * 1000);
+				await page.click("#app > div > div.list-selector > div > div.el-pagination.is-background > button.btn-next");
+			} catch (clickError) {
+				consoleUtil.log("点击下一页按钮失败", clickError.message);
+				break;
+			}
+		}
+		// 原子更新
+		auctionInfos = tempAuctionInfos;
+		consoleUtil.log("缓存完成, 共计", auctionInfos.length, "个商品");
+	} catch (error) {
+		consoleUtil.error("缓存商品时发生错误:", error.message);
+		// 抛出错误，以便Promise可以被reject
+		throw error;
+	} finally {
+		// 标记缓存完成
+		catching = false;
+		if (browser) {
+			await browser.close();
+			consoleUtil.log("浏览器已关闭");
 		}
 	}
-	await browser.close();
-	console.log("缓存完成，浏览器已关闭");
-	// 标记缓存完成
-	catching = false;
 }
 
-
+async function manualCacheProduct(params = {}) {
+	// 重置Promise，强制重新执行cacheProduct
+	cachePromise = null;
+	cachePromise = cacheProduct(params);
+}
 
 /**
  * 搜索产品请求
- * status: ""：全部，1：即将开始，2：正在进行
+ * status: 0：全部，1：即将开始，2：正在进行
  * */
 async function fetchProduct(params = {}) {
-	const { name, pageNo = 1, status = "" } = params;
-
-	// 如果还没有开始缓存，则启动缓存任务
-	if (!cachePromise) {
-		cachePromise = cacheProduct();
-		// 等待缓存任务完成（但不阻塞fetchProduct的返回）
-		cachePromise.catch((error) => {
-			consoleUtil.error("缓存任务出错:", error.message);
-		});
-	}
-
-	// 等待auctionInfos有值，最多等待3秒
-	const timeoutPromise = new Promise((_, reject) => {
-		setTimeout(() => {
-			reject(new Error("缓存超时"));
-		}, 3000);
-	});
+	const { name, pageNo = 1, status = 0 } = params;
 
 	try {
-		// 等待auctionInfos有值或超时
-		await Promise.race([
-			new Promise((resolve, reject) => {
-				const checkInterval = setInterval(() => {
-					if (auctionInfos && auctionInfos.length > 0) {
-						clearInterval(checkInterval);
-						resolve();
-					}
-				}, 100);
-
-				// 3秒超时检查
-				setTimeout(() => {
-					clearInterval(checkInterval);
-					reject(new Error("缓存超时"));
-				}, 3000);
-			}),
-			timeoutPromise
-		]);
+		// 如果还没有开始缓存，则启动缓存任务并等待它完成
+		if (!cachePromise) {
+			cachePromise = cacheProduct();
+		}
+		// 等待缓存任务完成
+		await cachePromise;
 
 		let search_auctions = []
 		for (let auction of auctionInfos) {
-			if (auction.productName.includes(name) && (status === "" || auction.status === status)) {
+			if (auction.productName.includes(name) && (status === 0 || auction.status === status)) {
 				search_auctions.push(auction);
 			}
 		}
 
-		const productSearchResult = {
+		return {
 			itemList: search_auctions,
 		};
-		return productSearchResult;
 	} catch (error) {
-		// 超时或出错时返回空的productSearchResult
+		// 如果缓存失败，重置Promise以便下次可以重试
+		cachePromise = null;
 		consoleUtil.log("fetchProduct超时或出错:", error.message);
-		const productSearchResult = {
+		return {
 			itemList: [],
 		};
-		return productSearchResult;
 	}
 }
 
@@ -1037,5 +1007,6 @@ module.exports = {
 	goToProductPage,
 	getLoginStatus,
 	isBrowserDisconnected,
-	cancelBid
+	cancelBid,
+	manualCacheProduct
 };
