@@ -868,10 +868,10 @@ async function fetchProduct(params = {}) {
 		}
 		// 等待缓存任务完成
 		await cachePromise;
-
+		let now_timestamp = new Date().getTime();
 		let search_auctions = []
 		for (let auction of auctionInfos) {
-			if (auction.productName.includes(name) && (status === 0 || auction.status === status)) {
+			if (auction.endTime > now_timestamp && auction.productName.includes(name) && (status === 0 || auction.status === status)) {
 				search_auctions.push(auction);
 			}
 		}
