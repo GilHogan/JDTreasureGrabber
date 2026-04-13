@@ -1,5 +1,7 @@
 # 京东夺宝岛助手
 
+**鉴于目前京东App夺宝岛自带自动抢购功能，且暂无方案绕过夺宝岛web的安全检测，该项目暂停维护**
+
 在 release 中可直接下载或自行打包构建😘
 
 [![release](https://img.shields.io/github/v/release/GilHogan/JDTreasureGrabber?color=blue&label=Release)](https://github.com/GilHogan/JDTreasureGrabber/releases)
